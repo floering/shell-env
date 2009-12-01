@@ -1,6 +1,4 @@
-# Adam's .bash_profile
-#
-# for those shitty times when zsh isn't to hand
+# Ben's .bash_profile
 #
 # $Id: .bash_profile,v 1.16 2006-03-13 10:57:52 adam Exp $
 

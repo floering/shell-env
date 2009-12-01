@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Adam's shared environment startup file
+# Ben's shared environment startup file
 #
 # $Id: .shared_env,v 1.81 2008-09-03 15:03:13 adam Exp $
 #

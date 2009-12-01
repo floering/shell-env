@@ -1,8 +1,8 @@
-# Adam's .bashrc
-#
-# for those shitty times when zsh isn't to hand
-#
 # $Id: .bashrc,v 1.57 2009-11-20 14:09:21 adam Exp $
+#
+# Ben's .bashrc   --  converted on 6/29/06 from default .cshrc 
+#                 --  modified on 4/2/07 for non-interactive
+#                 --  merged with Adam Spiers's setup on 12/1/09
 
 # .bashrc is invoked by non-login interactive shells and by login
 # interactive shells via a hook in my .bash_profile; also when bash is
@@ -21,8 +21,11 @@
 
 sh_load_status .bashrc
 
-# {{{ source /etc/bashrc
+# {{{ source system profiles
 
+if [ -e /usr/local/setup/sys.bash_profile ] ; then
+  . /usr/local/setup/sys.bash_profile
+fi
 if [ -f /etc/bashrc ]; then
     sh_load_status "/etc/bashrc"
     . /etc/bashrc
@@ -51,27 +54,31 @@ if [ -n "$shell_interactive" ]; then
 # }}}
 
 # {{{ ls colours
-
-if which dircolors >/dev/null 2>&1 && [ -e ~/.dircolors ]; then
-  sh_load_status "dircolors"
-  eval `dircolors -b ~/.dircolors`
+if [ -e ~/mytools/bin/dircolors ]; then
+  sh_load_status "dir_colors"
+  eval `~/mytools/bin/dircolors ~/.dir_colors`
+elif which dircolors >/dev/null 2>&1 && [ -e ~/.dir_colors ]; then
+  sh_load_status "dir_colors"
+  eval `dircolors -b ~/.dir_colors`
 fi
 
 # }}}
 # {{{ Key bindings
 
-sh_load_status "key bindings"
-
-set -o emacs # vi sucks ;-)
-bind '"\ep":history-search-backward'
-bind '"\en":history-search-forward'
-bind '"\e\C-i":dynamic-complete-history'
+#sh_load_status "key bindings"
+#
+#set -o emacs 
+#bind '"\ep":history-search-backward'
+#bind '"\en":history-search-forward'
+#bind '"\e\C-i":dynamic-complete-history'
 
 # }}}
 # {{{ Prompt
 
 sh_load_status "prompt"
-PS1="\u@\h \[\033[1m\]\\w\[\033[0m\] \\$ "
+. ~/bin/bens_prompt
+bens_prompt
+#PS1="\u@\h \[\033[1m\]\\w\[\033[0m\] \\$ "
 
 # }}}
 # {{{ Aliases and functions
@@ -97,7 +104,7 @@ alias lsa='ls -ah'
 alias lsd='ls -d'
 alias lsh='ls -dh .*'
 alias lsr='ls -Rh'
-alias ld='ls -ldh'
+#alias ld='ls -ldh'
 alias lt='ls -lth'
 alias llt='ls -lt'
 alias lrt='ls -lrth'

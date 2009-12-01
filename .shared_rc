@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Adam's shared interactive environment startup file
+# Ben's shared interactive environment startup file
 #
 # $Id: .shared_rc,v 1.2 2008-07-16 09:41:13 adam Exp $
 #
