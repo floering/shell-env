@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+#
+# abs -- convert to absolute path(s), all symlinks resolved
+
+# Copyright (c) 2001 Adam Spiers <adam@spiers.net>. All rights
+# reserved. This program is free software; you can redistribute it
+# and/or modify it under the same terms as Perl itself.
+
+use strict;
+use warnings;
+
+use Cwd;
+use File::Spec;
+use FindBin qw($RealScript);
+use Getopt::Long;
+
+use Sh qw(abs_path_by_chasing abs_path_by_chdir);
+
+my %opts = ();
+GetOptions(\%opts, 'help|h');
+
+if ($opts{help} || @ARGV == 0) {
+  die <<USAGE;
+Usage: $RealScript <path> [ <path> ... ]
+USAGE
+}
+
+foreach my $path (@ARGV) {
+  $path = "./$path" if $path !~ m!/!;
+  print abs_path_by_chasing($path), "\n";
+}
+

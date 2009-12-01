@@ -1,0 +1,23 @@
+#autoload
+
+quiet=''
+[[ -n "$*[(r)(up|update)]" ]] && quiet='-q'
+
+home=${ZDOTDIR:-$HOME}
+
+normal_colourer=$home/bin/tty-colour-cvs
+diff_colourer=$home/bin/tty-colour-diff
+
+colourer=''
+
+if [[ -n "$*[(r)(up|update|co|checkout|tag|rtag)]" ]]; then
+  colourer="$normal_colourer"
+elif [[ -n "$*[(r)(diff|rdiff|patch)]" ]]; then
+  colourer="$diff_colourer"
+fi
+
+if [[ -n "$colourer" ]]; then
+  command cvs $quiet "$@" | $colourer
+else
+  command cvs $quiet "$@"
+fi

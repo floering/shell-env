@@ -1,0 +1,127 @@
+#!/bin/bash
+#
+# Unpacks one of several different types of archive to the current
+# directory.  If there is more than one entry in the top-level
+# directory, automatically creates a new subdirectory and unpacks to
+# that, in order to avoid filling the current directory with crap.
+# In every case, informs the user where the unpacked contents ended up.
+#
+# Adam Spiers <shell-hacks@adamspiers.org>
+
+me="`basename $0`"
+
+usage () {
+    cat <<EOF >&2
+Usage: $me ARCHIVE
+EOF
+    exit 1
+}
+
+if [ "$1" == -h ] || [ "$1" == --help ] || [ -z "$1" ]; then
+    usage
+fi
+
+archive_path="$1"
+archive="`basename \"$1\"`"
+
+if ! [ -e "$archive_path" ]; then
+    echo "$archive_path does not exist!" >&2
+    exit 1
+fi
+
+ideal_dest=
+case "$archive" in
+    *.tar|*.tgz|*.tbz|*.zip|*.Zip|*.ZIP|*.xpi|*.jar|*.class|*.job)
+        ideal_dest="${archive%.*}"
+        ;;
+    *.tar.gz)
+        ideal_dest="${archive%.tar.gz}"
+        ;;
+    *.tar.bz2)
+        ideal_dest="${archive%.tar.bz2}"
+        ;;
+    *)
+        echo "ERROR: $archive does not have a supported file extension" >&2
+        exit 1
+        ;;
+esac
+
+if ! tmpdir=`mktemp -d "$ideal_dest.tmp.XXXXXXXX"`; then
+    echo "mktemp failed: $!"
+    exit 1
+fi
+
+case "$archive" in
+    *.tar)
+        tar -C "$tmpdir" -xvf "$archive_path"
+        ;;
+    *.tar.gz|*.tgz)
+        tar -C "$tmpdir" -zxvf "$archive_path"
+        ;;
+    *.tar.bz2|*.tbz)
+        tar -C "$tmpdir" -jxvf "$archive_path"
+        ;;
+    *.zip|*.ZIP|*.Zip|*.xpi|*.jar|*.class|*.job)
+        unzip -d "$tmpdir" "$archive_path"
+        ;;
+    *)
+        echo "ERROR: $archive is not a supported archive format" >&2
+        exit 1
+        ;;
+esac
+
+dirents=$( ls -A "$tmpdir" | wc -l )
+
+if [ "$dirents" -eq 0 ]; then
+    echo "ERROR: $archive was empty?" >&2
+    exit 1
+fi
+
+if [ "$dirents" -gt 1 ]; then
+    # Naughty archive creator!  Would cause a mess if unpacked to cwd.
+    src="$tmpdir"
+    echo "$archive had more than one top-level entry"
+else
+    top_dirent=$( ls -A "$tmpdir" )
+    src="$tmpdir/$top_dirent"
+    echo "$archive is clean"
+    if ! [ -e "$top_dirent" ]; then
+        if mv "$src" .; then
+            echo "Look inside $top_dirent"
+            rmdir "$tmpdir"
+            exit 0
+        else
+            echo "ERROR: mv $src . failed" >&2
+            exit 1
+        fi
+    else
+        echo "$top_dirent already exists." >&2
+    fi
+fi
+
+if ! [ -e "$ideal_dest" ]; then
+    # safe to use ideal choice of destination directory
+    dest="$ideal_dest"
+else
+    echo "Ideal destination $ideal_dest already exists." >&2
+    dest="$archive.unpacked"
+    if [ -e "$dest" ]; then
+        echo "$dest also already exists." >&2
+        # Couldn't find a better place to move unpacked directory to, so
+        # leave it where it already is.
+        dest="$src"
+    fi
+fi
+
+if [ "$src" != "$dest" ]; then
+    #echo "mv $src $dest OK"
+    if ! mv "$src" "$dest"; then
+        echo "ERROR: mv $src $dest failed" >&2
+        exit 1
+    fi
+    [ -d "$tmpdir" ] && rmdir "$tmpdir"
+fi
+
+echo "Look inside $dest"
+exit 0
+

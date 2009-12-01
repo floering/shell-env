@@ -1,0 +1,129 @@
+#!/usr/bin/env perl
+##
+## tailfgrep -- monitor a file a la tail -f, looking for a given regexp
+## Copyright (C) 1999 Adam Spiers <adam@spiers.net>
+## 
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2 of the License, or
+## (at your option) any later version.
+## 
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+## 
+## For a copy of the GNU General Public License, see
+## http://www.gnu.org/ or write to the Free Software Foundation, Inc.,
+## 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+##
+## $Id: tailfgrep,v 1.11 2002-12-02 09:33:20 adams Exp $
+## 
+
+# TODO:
+#   - extend to multiple patterns (one for each file?)
+#   - include more options from tail (e.g. -n) and grep (e.g. -i)
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+my ($quiet, $inverse, $match) = (0, 0, 0);
+GetOptions(
+           "quiet|q" => \$quiet,
+           "inverse|v" => \$inverse,
+           "match|m" => \$match,
+          );
+
+unless (@ARGV) {
+  die <<EOF;
+Usage: tailfgrep [ options ] <Perl regexp> <file1> [ <file2> [ <file3> ... ] ]
+   -m, --match    --  echo everything to STDOUT, exit when first match found
+   -q, --quiet    --  quiet mode, same as grep -q; don't print matches,
+                      exit when first match found
+   -v, --inverse  --  inverse mode (print lines which don't match)
+EOF
+}
+
+my ($re, @files) = @ARGV;
+
+my %fh = ();
+open_files();
+
+$| = 1;
+
+my $last_file = '';
+
+while (1) {
+ FILE:
+  foreach my $file (@files) {
+    my $fh = $fh{$file};
+    while (defined($_ = <$fh>)) {
+      if ($quiet) {
+        exit 0 if match($_);
+      }
+      elsif ($match) {
+        output_line($file);
+        exit 0 if match($_);
+      }
+      else {
+        output_line($file) if match($_);
+      }
+    }
+    seek($fh, 0, 1); # clear EOF
+  }
+  sleep 1;
+}
+
+close_files();
+
+sub open_files {
+  if (! @files && -t 1) {
+    push @files, '-';
+  }
+
+  foreach my $file (@files) {
+    if ($file eq '-') {
+      $fh{$file} = *STDIN;
+      next;
+    }
+
+    -f $file or die "$file isn't a file.\n";
+    local *FH;
+    open(FH, $file) or die "Couldn't open $file: $!\n";
+    seek(FH, 0, 2);
+    $fh{$file} = *FH;
+  }
+}
+
+sub close_files {
+  foreach my $file (@files) {
+    my $fh = $fh{$file};
+#    warn "closing $file / $fh\n";
+    close($fh);
+  }
+}
+
+sub match {
+  my ($line) = @_;
+  return ($line =~ /$re/) ^ $inverse;
+}
+
+sub output_line {
+  my ($file) = @_;
+
+  $file = 'STDIN' if $file eq '-';
+
+  if (@files > 1) {
+    if ($file ne $last_file) {
+      print "\n==> $file <==\n\n";
+    }
+    print;
+    $last_file = $file;
+  }
+  else {
+    print;
+    $last_file = $file;
+  }
+}

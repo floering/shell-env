@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ $# = 0 ]; then
+  # get usage
+  which
+else
+  if which "$@" >/dev/null; then
+    # -F is --quit-if-one-screen
+    less -F `which "$@"`
+  else
+    which "$@"
+  fi
+fi

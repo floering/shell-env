@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+#
+# Reads symlinks from @ARGV and/or STDIN
+# and converts them to hard links.
+#
+
+use strict;
+use warnings;
+
+use Cwd;
+use File::Basename;
+use File::Copy;
+use Getopt::Long;
+
+(my $me = $0) =~ s,.*/,,;
+
+my %opts;
+GetOptions(\%opts, 'help|h', 'test|t', 'copy|c') or usage();
+usage() if $opts{help};
+
+sub usage {
+  die <<EOUSAGE;
+Usage: $me [options] [symlink1 [symlink 2 ...] | [ < symlink-file ] ]
+Options:
+  -t, --test   See what would have happened.
+  -c, --copy   Make copies instead of hard links.
+
+Takes a list of symlinks from arguments and/or STDIN (one per line)
+and converts them to hard links or copies.
+EOUSAGE
+}
+
+my @links = @ARGV;
+if (! @ARGV && ! -t 0) {
+  while (<STDIN>) {
+    chomp;
+    s/^\s+//;
+    s/\s+$//;
+    push @links, $_;
+  }
+}
+
+my $start_dir = cwd();
+harden($_) foreach @links;
+
+sub harden {
+  my ($link) = @_;
+
+  chdir($start_dir) or die "chdir($start_dir) failed: $!\n";
+
+  unless (-l $link) {
+    warn "$link not a symlink; skipping.\n";
+    return;
+  }
+
+  my $dest = readlink $link or die "$me: readlink($link): $!\n";
+
+  if ($opts{test}) {
+    print "Would ", $opts{copy} ? 'copy' : 'harden', " $link\n";
+    return;
+  }
+  
+  unlink $link or die "$me: unlink($link): $!\n";
+
+  my $link_dir  = dirname($link);
+  my $link_file = basename($link);
+  chdir($link_dir) or die "chdir($link_dir) failed: $!\n";
+  return if $opts{copy} ? copy($dest, $link_file) : link($dest, $link_file);
+  warn "$me: ", $opts{copy} ? 'copy' : 'link',
+       "($dest, $link) failed: $!\n";
+
+  symlink($dest, $link_file)
+    or warn "$me: WARNING!  Couldn't restore symlink $link -> $dest ",
+            "after hardening failed ($!)\n";
+}

@@ -1,0 +1,104 @@
+# -*- mode: sh -*-
+#
+# .ns - Nice Shell
+# (short name for quick invocation from other shells)
+#
+# Source this to get a decent setup from another account.
+#
+# $Id: .ns,v 1.10 2006-10-20 14:48:16 adam Exp $
+#
+
+if [ -n "$DEBUG_NS" ]; then
+  set -x
+fi
+
+find_zdotdir () {
+  # We have to intelligently guess where this file is.
+
+  # When this file is sourced:
+  #   in sh/bash/ksh, $0 becomes the interpreter name (i.e. 'bash' etc.)
+  #   in zsh,         $0 becomes the argument to source (i.e. this file)
+  if [ -n "${BASH_SOURCE[0]}" ]; then
+    here="${BASH_SOURCE[0]}"
+  else
+    here="$0"
+  fi
+  case "$here" in
+    -*)
+      echo "Couldn't figure out where to look for .zshrc; please specify ZDOTDIR.  Aborting." >&2
+      return 1
+      ;;
+  esac
+  
+  here="`dirname $here`"
+  if ! [ -e $here/.zshrc ]; then
+    echo "$here missing .zshrc, aborting." >&2
+    return 1
+  fi
+
+  # Not sure why I bothered with this.
+#  here="`$here/bin/shortcuts/abs $0`"
+#  here="`dirname $here`"
+
+  if ! [ -e $here/.zshrc ]; then
+    echo "abs failed"
+    return
+  fi
+
+  ZDOTDIR="$here"
+}
+
+detect_current_shell () {
+  current_shell=
+
+  if [ -n "$ZSH_VERSION" ]; then
+    current_shell=zsh
+    if [ -n "$BASH_VERSION" ]; then
+      echo "BUG!  Both {BASH,ZSH}_VERSION set" >&2
+      return 1
+    fi
+  elif [ -n "$BASH_VERSION" ]; then
+    current_shell=bash
+  else
+    case "$SHELL" in
+        *bash) current_shell=bash ;;
+         *zsh) current_shell=zsh  ;;
+    esac
+  fi
+}
+
+[ -z "$ZDOTDIR" ] && find_zdotdir
+export ZDOTDIR # but see caveat at EOF
+detect_current_shell
+
+[ -z "$shared_env_loaded" ] && source "$ZDOTDIR/.shared_env"
+
+# Don't do anything with non-interactive shells.
+[ -z "$shell_interactive" ] && return 1
+
+if [ -n "$DEBUG_NS" ]; then
+  set +x
+fi
+
+case "$current_shell" in
+  bash)
+    source "$ZDOTDIR/.bashenv"
+    source "$ZDOTDIR/.bashrc"
+    # Are you feeling lucky, punk?
+    SHLVL=force_danger source "$ZDOTDIR/.switch_shell" "$@"
+    ;;
+  zsh)
+    source "$ZDOTDIR/.zshenv"
+    source "$ZDOTDIR/.zshrc"
+    ;;
+  *)
+    source "$ZDOTDIR/.switch_shell" "$@"
+    ;;
+esac
+
+# N.B. If this file was source'd via:
+#   ZDOTDIR=/home/aspiers source /home/aspiers/.ns
+# or similar, as soon as the "source-ing" finishes,
+# for some reason ZDOTDIR vanishes.  So better to
+# do an explicit export of ZDOTDIR at invocation time.
+# Dunno if this is a bug or feature.

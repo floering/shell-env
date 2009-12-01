@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ -t 1 ]; then
+  # connected to a tty => make it fit for human consumption
+  opts=--expand-tabs
+fi
+
+exec diff -u $opts "$@" | tty-colour-diff

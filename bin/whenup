@@ -1,0 +1,33 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 [-a] <host>"
+  exit 1
+fi
+
+if [ "$1" == '-a' ]; then
+  alertme=yes
+  shift
+fi
+
+host="$1"
+shift
+
+up=
+case "$OSTYPE" in
+  solaris*) ping -s "$host" | tailfgrep -q 'bytes from' && up=yes
+            ;;
+
+  # FreeBSD and Linux
+         *) ping "$host" | tailfgrep -q 'bytes from' && up=yes
+            ;; 
+esac
+
+if [ -n "$up" ]; then
+  if [ -n "$alertme" ]; then
+    alertme "$host is pingable" >&/dev/null
+  fi
+  exit 0
+else
+  exit 1
+fi

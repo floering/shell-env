@@ -1,0 +1,16 @@
+#!/bin/bash
+
+~/bin/service-commands
+~/bin/cm
+~/bin/grep-shortcuts
+~/bin/keymap-menu install-symlinks
+( cd ~/bin; [ -e rjt ] || ln -s rj rjt )
+
+if which zsh >&/dev/null; then
+  zsh -c zrec
+fi
+
+# Make sure synced with $LESSKEY in .shared_env
+if which lesskey >/dev/null 2>&1; then
+  lesskey -o ~/.less
+fi

@@ -1,0 +1,68 @@
+#!/usr/bin/env perl
+#
+# dts - runs a command, date/time-stamping each line of STDOUT
+#
+# Understands a single optional argument for the type of format to use.
+# l => localtime long format - DEFAULT
+# g => gmtime long format, e.g. 2003/09/05 09:52:17.139092
+# a => absolute seconds
+
+use strict;
+use warnings;
+
+use Date::Calc 'Day_of_Week_Abbreviation';
+use Getopt::Long;
+use Time::HiRes;
+
+$| = 1; # turn output buffering off
+
+(my $ME = $0) =~ s,.*/,,;
+
+my %opts = ();
+Getopt::Long::Configure('bundling', 'passthrough');
+GetOptions(
+  \%opts,
+  'help|h',
+  'gmtime|g', 'epoch|e', 'usec|u',
+) or usage();
+usage() if $opts{help};
+
+sub usage {
+  warn @_, "\n" if @_;
+
+  die <<EOUSAGE;
+Usage: $ME [options] COMMAND [ARGS...]
+If COMMAND is omitted, acts as a STDIN filter instead.
+Options:
+  -h, --help         Show this help
+  -g, --gmtime       Use UTC not local time
+  -e, --epoch        Show seconds since UNIX epoch
+  -u, --usec         Show microseconds
+EOUSAGE
+}
+
+my $printformat = "%04d/%02d/%02d %3s %02d:%02d:%02d";
+$printformat .= ".%06d" if $opts{usec};
+$printformat .= " ";
+
+open(CMD, @ARGV ? "@ARGV |" : "<&STDIN") or die $!;
+while(<CMD>) {
+  my ($seconds, $usec) = Time::HiRes::gettimeofday();
+  if ($opts{epoch}) {
+    print $seconds . "." . $usec . " " . $_;
+  }
+  else {
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)
+      = $opts{gmtime} ? gmtime($seconds) : localtime($seconds);
+    printf $printformat,
+           1900 + $year,
+           $mon + 1,
+           $mday,
+           Day_of_Week_Abbreviation($wday+1),
+           $hour,
+           $min,
+           $sec,
+           $opts{usec} ? $usec : ();
+    print;
+  }
+}

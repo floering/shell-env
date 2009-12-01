@@ -1,0 +1,51 @@
+#!/bin/sh
+
+# avoid using : in the filename as will break usage within
+# $PATH etc., also in NFS automounts according to the Hickster.
+
+usage () {
+    if [ -n "$1" ]; then
+        echo "$*" >&2
+        echo
+    fi
+
+    me=`basename $0`
+
+    cat <<EOF >&2
+Usage: $me [-p] [-t]
+Default format: YYYY-MM-DD
+Options:
+  -p  Path format: YYYY/MM/DD
+  -t  Append time: -HHMMhSS (or /HHMMhSS if with -p)
+EOF
+    exit 1
+}
+
+format="%Y-%m-%d"  # Equivalent to %F, the ISO 8601 date format.
+
+while [ -n "$1" ]; do
+    case "$1" in
+        -p)
+            format="%Y/%m/%d"
+            path=y
+            shift
+            ;;
+        -t)
+            timestamp=y
+            shift
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+if [ -n "$timestamp" ]; then
+    if [ -n "$path" ]; then
+        format="$format/%H%Mh%Ss"
+    else
+        format="$format-%H%Mh%Ss"
+    fi
+fi
+
+date +"$format"
