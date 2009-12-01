@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Make Not eXecutable
+exec chmod -x "$@"

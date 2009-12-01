@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+#
+# wget-monitor -- simple URL monitor
+#
+# Stick a list of URLs in ~/.wget-monitor, one per line, (blank lines
+# and comment lines with '#' allowed) for wget to retrieve.  First
+# invocation fetches the URLs into a local cache; subsequent
+# invocations diff the online version against the cache.
+#
+# Copyright (c) 2003 Adam Spiers <adam@spiers.net>.  All rights
+# reserved. This program is free software; you can redistribute it
+# and/or modify it under the same terms as Perl itself.
+#
+# $Id: wget-monitor,v 1.5 2004-05-05 11:39:08 adams Exp $
+#
+
+use strict;
+use warnings;
+
+use File::Basename;
+use File::Path;
+use File::Temp 'tempdir';
+
+open(CFG, "$ENV{HOME}/.wget-monitor")
+  or die "$0: $!\n";
+
+my $cache = "$ENV{HOME}/.wget-monitor-cache";
+-d $cache or mkdir $cache;
+
+my $tempdir = tempdir("/tmp/wget-monitor-XXXXXXX", CLEANUP => 1);
+
+my $changes = 0;
+while (<CFG>) {
+  next if /^\s*#/ || /^\s*$/;
+
+  chomp;
+
+  m!^((http|ftp):)//! or die "Weird line $.:\n$_\n";
+  my $proto = $1;
+
+  chdir $tempdir or die "chdir($tempdir) failed: $!\n";
+  my $wget = `wget -nv -x "$_" 2>&1`;
+  my ($path) = $wget =~ /-> "(.+)"/
+    or die "Weird output from wget:\n$wget\n";
+  my $new = "$tempdir/$path";
+  my $old = "$cache/$proto/$path";
+
+  if (-e $old) {
+    my $diff = `diff -u "$old" "$new"`;
+    if ($diff) {
+      $changes++;
+      $diff =~ s!^--- $cache/!--- !m;
+      print $diff;
+    }
+  }
+  else {
+    my $dir = dirname($old);
+    mkpath($dir, 0, 0700) or die "mkpath($dir) failed: $!\n";
+  }
+
+  rename $new, $old
+    or warn "rename($new, $old) failed: $!\n";
+}
+
+exit $changes;

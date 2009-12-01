@@ -1,0 +1,301 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+logseek - jump to a date/time within a large log file
+
+=head1 SYNOPSIS
+
+    $ logseek --help
+    $ logseek -5 'yesterday 9am' /var/log/messages
+
+=head1 DESCRIPTION
+
+Uses a binary search to rapidly seek to a particular date/time within
+a large log file.
+
+=head1 BUGS
+
+Doesn't support multiple files.  Doesn't support many timestamp
+formats.
+
+=head1 SEE ALSO
+
+grep(1), tail(1)
+
+=head1 AUTHOR
+
+Adam Spiers <logseek@adamspiers.org>
+
+=cut
+
+use strict;
+use warnings;
+
+use Date::Manip qw(ParseDate Date_Cmp);
+use Fcntl ':seek';
+use Getopt::Long;
+use Search::Binary;
+
+# If we jump less than 512 bytes, switch to sequential searching.
+use constant SEQ_SEARCH_THRESHOLD => 512;
+
+###############################################################################
+# Parse options
+my %opts = ( verbose => 0, strict => 0 );
+
+# We rely on there being a timestamp at least every 500 lines.
+my $unparsable_line_threshold = 500;
+
+Getopt::Long::Configure("bundling");
+
+# Convert -5 into -C5
+foreach my $i (0 .. $#ARGV) {
+  $ARGV[$i] eq '--' and last;
+  $ARGV[$i] =~ s/^-(\d+)$/-C$1/ and last;
+}
+
+GetOptions(
+  \%opts,
+  'before|B=s', 'context|C=i', 'position|p', 'strict|s', 'verbose|v+',
+  'threshold|t=i',
+) or usage();
+$unparsable_line_threshold = $opts{'threshold'} if $opts{'threshold'};
+
+usage("Invalid NUM '$opts{before}' for -b/--before")
+  unless ($opts{before} || '5') =~ /^\d+(b|k|m|G)?$/;
+usage("Can't have both --before and --context")
+  if $opts{before} and $opts{context};
+usage() if $opts{help} or @ARGV != 2;
+
+my ($human_date, $log) = @ARGV;
+
+my $date = ParseDate($human_date)
+  or usage ("Didn't understand date '$human_date'; aborting.\n");
+
+my $fh;
+open($fh, $log) or usage("open($log) failed: $!\n");
+
+###############################################################################
+# Main program
+
+my $min = 0;
+my $size = -s $fh;
+
+my $pos = binary_search(
+  $min,       # minimum search boundary
+  $size,      # maximum search boundary
+  $date,      # value we're looking for
+  \&log_read, # callback from Search::Binary to find it
+  $fh,        
+  SEQ_SEARCH_THRESHOLD, # switch to sequential searching if we're this close
+);
+my $before = $opts{before} || $opts{context};
+jump_back($fh, $before) if $before;
+output_result($fh);
+
+exit 0;
+
+#################################################################################
+
+sub log_read {
+  my ($fh, $val, $pos) = @_;
+
+  if ($pos) {
+    # read 1st whole rec starting at/after $pos
+    seek($fh, $pos - 1, SEEK_SET); # Jump to just before $pos
+    my $discard_this = <$fh>;
+  }
+
+  my $unparsable_lines = 0;
+
+ READLINE: {
+    my $newpos = tell($fh);
+
+    my $line = <$fh>;
+    unless (defined $line) {
+      # Search::Binary asks for the first arg to be positive iff the
+      # value we're looking for ($date) is strictly greater than the
+      # current record's.  We hit EOF, so this must be the case.
+      warn "* Hit EOF while searching for $human_date\n" if $opts{verbose};
+      return (0, $newpos);
+    }
+
+    chomp $line;
+    warn "* Read: $line\n" if $opts{verbose} > 1;
+
+    my $rpos = readable_pos($newpos, $size);
+    my ($line_human_date, $line_date) = parse_date_from_line($line, $rpos);
+
+    unless ($line_date) {
+      # If we're not being strict, keep chewing lines till we find a
+      # date.
+      warn "*  Ignoring line $rpos: $line\n" if $opts{verbose} > 1;
+      die "Hit threshold of " . $unparsable_line_threshold .
+          " lines without parsable timestamp; aborting.\n"
+            if ++$unparsable_lines >= $unparsable_line_threshold;
+      redo READLINE;
+    }
+
+    $unparsable_lines = 0;
+  
+    # Now let Search::Binary do the hard work.
+    # Search::Binary asks for the first arg to be positive iff the
+    # value we're looking for ($date) is strictly greater than the
+    # current record's, 0 if equal, -1 if strictly less.
+    warn "* Jumped to: $line_human_date ($newpos bytes)\n" if $opts{verbose};
+    return (Date_Cmp($date, $line_date), $newpos);
+  }
+}
+
+sub parse_date_from_line {
+  my ($line, $rpos) = @_;
+
+  my $line_human_date = extract_date_from_line($line, $rpos);
+  if (! $line_human_date) {
+    die "Couldn't extract date from line @ $pos bytes\n$line\n"
+      if $opts{strict};
+    return;
+  }
+
+  warn "* Extracted date '$line_human_date' from line $rpos\n"
+    if $opts{verbose} > 2;
+
+  my $line_date = ParseDate($line_human_date);
+  if (! $line_date) {
+    die "Couldn't parse date $line_human_date on line $rpos\n"
+      if $opts{strict};
+    return;
+  }
+
+  return ($line_human_date, $line_date);
+}
+  
+sub extract_date_from_line {
+  my ($line, $rpos) = @_;
+  # FIXME: make pattern "sticky"
+
+  # syslog, Apache error log
+  return $1 if $line =~ /^\[?([\w\s:]{10}[\d\s:]*)/;
+
+  # Apache access log
+  return $1 if $line =~ /^(?:\S+| ) \S+ \S+ \[(.+?)\]/;
+
+  # twiki log*.txt
+  return $1 if $line =~ /^\| (.\d \w\w\w \d{4} - .\d:\d\d)/;
+
+  # conserver log
+  return $1 if $line =~ /^\[(\w\w\w \w\w\w .\d \d\d:\d\d:\d\d \d\d\d\d)\]/;
+
+  # xend log
+  return $1 if $line =~ /^\[(\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d) \d\d\d\d\]/;
+
+  # TODO: Add more patterns here.
+  return undef;
+}
+
+sub jump_back {
+  my ($fh, $how_much) = @_;
+  if ($how_much =~ /^(\d+)(b|k|M|G)$/) {
+    my $bytes = $2 eq 'b' ? $1
+              : $2 eq 'k' ? $1 * (2**10)
+              : $2 eq 'M' ? $1 * (2**20)
+              : $2 eq 'G' ? $1 * (2**30)
+              : die "BUG";
+    seek($fh, -$bytes - 1, SEEK_CUR);
+    warn "* Jumped back $bytes bytes\n" if $opts{verbose};
+    my $discard_this = <$fh>;
+  }
+  else {
+    eval {
+      require File::ReadBackwards;
+    };
+    if ($@) {
+      die "You need the File::ReadBackwards Perl module installed to do this.\n";
+    }
+    my $bw = File::ReadBackwards->new( $log );
+    my $pos = tell($fh);
+    warn "* Starting to read backwards from $pos bytes\n" if $opts{verbose};
+    seek($bw->get_handle, $pos, SEEK_SET);
+
+    # FIXME: VERY NAUGHTY! fiddle with File::ReadBackwards object
+    # internals because it doesn't natively support starting from
+    # anywhere but the end of the file.  Doh!
+    $bw->{seek_pos}  = $pos;
+
+    # Get size of first block to read; either a trailing partial one
+    # (the % size) or full sized one (max read size).
+    # Max is 8k, hardcoded in File::ReadBackwards as a lexical :-(
+    my $max_read_size = 1 << 13; 
+    $bw->{read_size} = $pos % $max_read_size || $max_read_size;
+
+    # First read will get the line we're already on.
+    $bw->readline;
+
+    for (my $i = 0; $i < $how_much; $i++) {
+      my $line = $bw->readline;
+      chomp $line;
+      warn "* Read previous line: $line\n" if $opts{verbose} > 1;
+      $line or last;
+    }
+
+    seek($fh, $bw->tell, SEEK_SET);
+  }
+}
+
+sub readable_pos {
+  my ($pos, $size) = @_;
+  return sprintf "@ %d bytes (%.1f%%)", $pos, $pos / $size * 100;
+}
+
+sub output_result {
+  my ($fh) = @_;
+  if ($opts{position}) {
+    my $pos = tell $fh;
+    printf "%d %.1f%%\n", $pos, $pos / $size * 100;
+  }
+  else {
+    if ($opts{context}) {
+      my $c = 0;
+      while (<$fh>) {
+        print;
+        last if ++$c >= $opts{context} * 2;
+      }
+    }
+    else {
+      print while <$fh>;
+    }
+  }
+}
+
+sub usage {
+  warn @_, "\n" if @_;
+  die <<EOUSAGE;
+Usage: $0 [options] DATE_EXPR LOGFILE
+
+Using binary search to cope with huge files, outputs log file starting
+at first line with a linestamp matching DATE_EXPR.  Currently syslog,
+Apache, twiki, and conserver linestamp formats are supported, but more
+could easily be added.
+
+DATE_EXPR can be things like:
+      May 1
+      yesterday 12am
+      2 weeks ago
+      2004/06/22
+Run 'perldoc Date::Manip' and read the ParseDate section for more information.
+
+Options:
+  -B, --before=NUM    Print NUM lines of leading context before target line,
+                      or NUM bytes/kB/MB/GB if NUM is suffixed with b/k/M/G
+     (N.B. there is no -A or --after, use head(1) instead.)
+  -C, --context=NUM   Print NUM lines of context
+  -NUM                Same as --context=NUM
+  -p, --position      Output start position in bytes instead of the file itself
+  -s, --strict        Abort if a non-date line is found
+  -t, --threshold=NUM Assume a timestamp at least every NUM lines
+  -v, --verbose       See binary search in action (repeat to increase verbosity)
+EOUSAGE
+}
+
+  

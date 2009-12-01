@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Track the start and end times of a command, ensuring against
+# concurrent invocations.  Useful as a helper for asynchronous
+# process invocations.
+
+AGE_DIR="$HOME/.age"
+
+me=`basename $0`
+
+. $ZDOTDIR/lib/libproc.sh
+
+usage () {
+  cat <<EOF >&2
+Usage: $me COMMAND [-n NAME] [ARGS]
+EOF
+  exit 1
+}
+
+if [ "$1" == -h ] || [ "$1" == --help ] || [ $# -eq 0 ]; then
+  usage
+fi
+
+if [ "$1" == -n ]; then
+  name="$2"
+  shift 2
+fi
+
+cmd="$1"
+shift
+
+base_cmd=`basename "$cmd"`
+cmd_dir="$AGE_DIR/${name:-$base_cmd}"
+mkdir -p "$cmd_dir"
+lock="$cmd_dir/lock"
+
+clean_up () {
+  date +"%s" > "$cmd_dir/end"
+  rm "$lock" || echo "$me: WARNING: rm $lock failed" >&2
+}  
+
+obtain_lock "$lock" "$cmd" || exit 1
+# Signal must be trapped *after* obtaining lock, otherwise
+# failure to obtain the lock would remove an active lock.
+trap clean_up EXIT
+
+echo "$*" > "$cmd_dir/args"
+date +"%s" > "$cmd_dir/start"
+[ -e "$cmd_dir/exit_code" ] && rm -f "$cmd_dir/exit_code"
+
+"$cmd" "$@" &
+
+child_pid=$!
+wait $child_pid
+
+exit=$?
+echo $exit > "$cmd_dir/exit_code"
+exit $exit

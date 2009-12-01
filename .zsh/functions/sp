@@ -1,0 +1,3 @@
+#autoload
+
+echo "${(FP)${1:-path}}"

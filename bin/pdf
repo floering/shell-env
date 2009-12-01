@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# See ~/roaming/notes/PDFviewers.org for justification on decision order
+viewers='okular kpdf evince acroread xpdf'
+
+found=
+for file in "$@"; do
+    if [ -r "$file" ]; then
+        found=y
+    else
+        echo "$file doesn't exist or unreadable!" >&2
+    fi
+done
+
+if [ -z "$found" ]; then
+    echo "No valid file found; aborting!" >&2
+    exit 1
+fi
+
+# acroread -help gets truncated before echoing 'openInNewWindow'
+# when STDOUT is not a tty?!
+
+# if acroread -helpall | grep -q openInNewWindow; then
+  acro_opts=-openInNewWindow
+# else
+#     acro_opts=
+# fi
+
+exe=
+for exe_check in $viewers; do
+    if which $exe_check >/dev/null 2>&1; then
+        exe=$exe_check
+#        echo "Will use $exe ..."
+        break
+    else
+        :
+#        echo "$exe_check not found"
+    fi
+done
+
+if [ -z "$exe" ]; then
+    echo "No PDF viewer found; aborting." >&2
+    exit 1
+fi
+
+if [ "$exe" = "acroread" ]; then
+    opts="$acro_opts"
+fi
+
+"$exe" $opts "$@"

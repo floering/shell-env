@@ -1,0 +1,76 @@
+#autoload
+
+if [[ $ZSH_VERSION_TYPE != 'new' ]]; then
+  echo Need new zsh for scvs
+  exit 1
+fi
+
+scvs () {
+  if [[ -z "$1" ]]; then
+    cat <<EOF
+Usage: scvs <tag> [ options ]
+CVSROOT=${CVSROOT-undefined}
+CVS_RSH=${CVS_RSH-undefined}
+export CVSROOT CVS_RSH
+EOF
+    return
+  fi
+
+  tag="$1"
+
+  shift
+
+  if (( ${+_CVSROOTS[$tag]} )); then
+    echo   "CVSROOT=$_CVSROOTS[$tag]"
+    export CVSROOT="$_CVSROOTS[$tag]"
+  else
+    echo "Warning: CVSROOT for $tag undefined; not setting." >&2
+  fi
+
+  if (( ${+_CVS_RSHS[$tag]} )); then
+    echo   "CVS_RSH=$_CVS_RSHS[$tag]"
+    export CVS_RSH="$_CVS_RSHS[$tag]"
+  else
+    echo "Warning: CVS_RSH for $tag undefined; not setting." >&2
+  fi
+}
+
+typeset -Ag _CVSROOTS _CVS_RSHS
+_CVSROOTS=(
+           # Put your own CVSROOTs here
+#          local             /usr/local/cvsroot
+           local             $HOME/.CVSROOT
+           mutt              :pserver:anonymous@ftp.guug.de:/home/roessler/cvs
+### BEGIN PRIVATE
+           adamspiers         adam@adamspiers.org:/home/adam/.CVSROOT
+           banjo              adam@banjo.celticmusic.com:/home/adam/.CVSROOT
+           f5                 adam@f5.mandolinarchive.com:/home/adam/.CVSROOT
+           sourceforge_anon   :pserver:anonymous@cvs.sourceforge.net:/cvsroot/\$1
+           sourceforge        :ext:adamspiers@cvs.sourceforge.net:/cvsroot/\$\{1:l\}
+
+           zsh_sf_local_write adamspiers@cvs1:/cvsroot/zsh
+           zsh_sf_local       :pserver:anonymous@cvs1:/cvsroot/zsh
+           zsh_remote_write   adamspiers@cvs.zsh.sourceforge.net:/cvsroot/zsh
+           zsh_remote         :pserver:anonymous@cvs.zsh.sourceforge.net:/cvsroot/zsh
+### END PRIVATE
+)
+
+_CVS_RSHS=(
+           # Put your own CVS_RSHs here, e.g.
+#          foo.bar.com       ssh
+#          foo.baz.com       rsh
+           local             ''
+### BEGIN PRIVATE
+#           lb-plig           ~/bin/cvs-ssh
+           adamspiers        ssh
+           banjo             ssh
+           f5                ssh
+           sourceforge       ssh
+           zsh_local_write   ssh
+           zsh_local         ssh
+           zsh_remote_write  ssh
+           zsh_remote        ssh
+### END PRIVATE
+          )
+
+scvs "$@"

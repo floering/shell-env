@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$0" in
+  *rjt) threads='-L' ;;
+  *)    threads=''   ;;
+esac
+
+# beginnings of a cleaner way then the grep -v grep nonsense
+# ps $opts | awk "(NR == 1) || /$1/"
+
+case "$OSTYPE" in
+  solaris*) exec /usr/bin/ps -ef $threads | egrep -v "grep.+USER|$0|ps -ef\$" | egrep "($*|^ *UID)"
+            ;;
+
+  # FreeBSD and Linux
+         *) exec ps auxwwww $threads | egrep -v "grep.+USER|$0|ps auxwwww\$" | egrep "($*|^USER)"
+            ;; 
+esac

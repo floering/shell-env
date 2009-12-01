@@ -1,0 +1,121 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use File::Find;
+use File::Spec;
+use FindBin qw($RealBin);
+use Getopt::Long;
+use List::Util;
+
+sub usage {
+  die <<EOUSAGE;
+Usage: $RealBin [options] SRC DST
+Options:
+  -n, --dry-run     Just show what would have been removed
+  -k, --keep-dirs   Don't prune empty directories
+  -s SUBPATH        Only work in SUBPATH of SRC and DST
+  -v, --verbose
+  -h, --help
+EOUSAGE
+}
+
+my %opts = ();
+Getopt::Long::Configure('bundling');
+GetOptions(
+  \%opts,
+  'dry-run|n', 'keep-dirs|k', 'subpath|s=s', 'verbose|v', 'help|h'
+) or usage();
+usage() if $opts{help} || @ARGV != 2;
+
+my ($src, $dst) = @ARGV;
+
+if ($opts{subpath}) {
+  $src = File::Spec->join($src, $opts{subpath});
+  $dst = File::Spec->join($dst, $opts{subpath});
+}
+
+my %doomed = ();
+
+rm_src_dups($src, $dst);
+
+unless ($opts{'keep-dirs'}) {
+  #chdir "/" or die "chdir(/) failed: $!\n";
+  finddepth({ wanted => \&prune_empty_dirs, no_chdir => 1}, $src);
+}
+
+exit 0;
+
+sub rm_src_dups {
+  my ($src, $dst) = @_;
+  my $pid = open(DIFF, "-|");
+  defined $pid or die "fork failed: $!\n";
+  if (! $pid) {
+    # in child
+    my @args = ( "diff", '-r', '--report-identical-files', '--brief', $src, $dst );
+    exec @args or die "exec(@args) failed: $!\n";
+  }
+
+  while (<DIFF>) {
+    chomp;
+    
+    if (/^Files (.+) and (\Q$dst\E.+) are identical$/) {
+      do_unlink($1);
+      next;
+    }
+    elsif (/^Files (.+) and (\Q$dst\E.+) differ$/) {
+      warn "$1 and $2 differ\n" if $opts{verbose};
+      next;
+    }
+  }
+}
+
+sub do_unlink {
+  my ($doomed) = @_;
+  if ($opts{'dry-run'}) {
+    warn qq{rm "$doomed"\n};
+    $doomed{$doomed}++;
+  }
+  else {
+    if (unlink($doomed)) {
+      warn qq{rm "$doomed"\n} if $opts{verbose};
+    }
+    else {
+      warn "unlink($doomed) failed: $!\n";
+    }
+  }
+}  
+
+sub prune_empty_dirs {
+  return unless -d;
+
+  if (dir_is_empty($_)) {
+    if ($opts{'dry-run'}) {
+      warn qq{rmdir "$_"\n};
+      $doomed{$_}++;
+    }
+    else {
+      warn qq{rmdir "$_"\n} if $opts{verbose};
+      rmdir($_) or die "rmdir($_) failed: $!\n";
+    }
+  }
+  else {
+    warn qq{Leaving non-empty dir "$_"\n} if $opts{verbose};
+  }
+}
+
+sub dir_is_empty {
+  my ($dir) = @_;
+
+  opendir(DIR, $dir) or die "opendir($dir) failed: $!\n";
+  my $got_one = 0;
+  while (my $dirent = readdir(DIR)) {
+    next if $dirent eq '.' or $dirent eq '..' or $doomed{"$dir/$dirent"};
+    $got_one++;
+    last;
+  }
+  closedir(DIR);
+  return $got_one ? 0 : 1;
+}
+

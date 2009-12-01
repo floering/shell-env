@@ -1,0 +1,42 @@
+#compdef oo ooffice
+
+local expl
+_description files expl 'OpenOffice.org files'
+_files "$@" "$expl[@]" -g '*.(#i)(od[mtsgpfb]|ot[tsgph]|html|sx[gwcidm]|st[wcid])'
+
+_msoffice "$@"
+
+# See also ~/.mime.types
+#
+# From OO.o 2.0 help:
+#
+# |------------------------------------+----------------|
+# | Document format                    | File extension |
+# |------------------------------------+----------------|
+# | OpenDocument Master Document       | *.odm          |
+# | OpenDocument Text                  | *.odt          |
+# | OpenDocument Spreadsheet           | *.ods          |
+# | OpenDocument Drawing               | *.odg          |
+# | OpenDocument Presentation          | *.odp          |
+# | OpenDocument Formula               | *.odf          |
+# | OpenDocument Database              | *.odb          |
+# | OpenDocument Text Template         | *.ott          |
+# | OpenDocument Spreadsheet Template  | *.ots          |
+# | OpenDocument Drawing Template      | *.otg          |
+# | OpenDocument Presentation Template | *.otp          |
+# | HTML Document Template             | *.oth          |
+# | HTML Document                      | *.html         |
+# |------------------------------------+----------------|
+# | Before OO.o 2.0:                   |                |
+# |------------------------------------+----------------|
+# | Master document                    | *.sxg          |
+# | OpenOffice.org Writer              | *.sxw          |
+# | OpenOffice.org Calc                | *.sxc          |
+# | OpenOffice.org Impress             | *.sxi          |
+# | OpenOffice.org Draw                | *.sxd          |
+# | OpenOffice.org Math                | *.sxm          |
+# | OpenOffice.org Writer template     | *.stw          |
+# | OpenOffice.org Calc template       | *.stc          |
+# | OpenOffice.org Impress template    | *.sti          |
+# | OpenOffice.org Draw template       | *.std          |
+# |------------------------------------+----------------|

@@ -1,0 +1,42 @@
+#!/usr/bin/expect -f 
+
+eval spawn -noecho $argv
+expect {
+    -timeout 20
+    -re "Password for .*: " {
+        stty -echo
+        interact {
+            "\r" {
+                send "\n"
+                return
+            }
+        }
+        exp_continue
+    }
+
+    " root]#" {
+        send "/home/aspiers/bin/zsh\n"
+        interact
+    }
+
+    " root#" {
+        send "/home/aspiers/bin/zsh\n"
+        interact
+    }
+
+    -re "root@loneqegen.cb. ~]# " {
+        send "adam\n"
+        interact
+    }
+
+    # Match prompts here
+    {\$} interact
+    -re "\n(root@\[a-z0-9-\]+ )?# ?$" {
+        # Solaris box :-(
+        send "bash\rset -o emacs\r"
+        interact
+    }
+
+    timeout interact
+    eof
+}

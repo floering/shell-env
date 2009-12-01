@@ -1,0 +1,243 @@
+#!/usr/bin/env perl
+#
+# dbm -- simple DBM file reader/writer
+#
+# Copyright (c) 1999 Adam Spiers <adam@spiers.net>. All rights
+# reserved. This program is free software; you can redistribute it
+# and/or modify it under the same terms as Perl itself.
+#
+# Version 0.17
+#
+# $Id: dbm,v 1.13 2003-03-31 14:23:14 adams Exp $
+#
+
+use strict;
+use warnings;
+
+use Fcntl qw(:DEFAULT);
+use Text::Abbrev;
+use Text::ParseWords;
+use Getopt::Long;
+
+my ($type, $help);
+GetOptions("type|t=s" => \$type, "help|h" => \$help);
+$type ||= 'AnyDBM_File';
+{
+  local $SIG{__DIE__} = sub { };
+  eval "require $type;";
+  die "Import of `$type' failed: $@" if $@;
+}
+
+if ($help || ! @ARGV) {
+  usage();
+  exit 1;
+}
+
+my $dbm_file = shift;
+
+my $action = shift;
+my %actions = ();
+abbrev \%actions, qw/create initialize
+                     set add change
+                     remove delete wipe erase
+                     list get fetch lookup
+                     find search
+                     edit
+                     clear/;
+unless ($action) {
+  usage("You must specify an action.");
+  exit 1;
+}
+$action = $actions{$action} if $action && exists $actions{$action};
+
+my %hash = ();
+
+if ($action =~ /^(create|initialize)$/) {
+  if (@ARGV) {
+    usage("`$action' takes no arguments.");
+    exit 1;
+  }
+
+  tie_dbm_bare(O_RDONLY);
+  if (tied %hash) {
+    die "Database already exists!\n";
+  }
+
+  tie_dbm(O_RDWR | O_CREAT);
+}
+elsif ($action =~ /^(add|set|change)$/) {
+  unless (@ARGV and @ARGV % 2 == 0) {
+    usage("`$action' needs an even number of arguments " .
+          "(key1, val1, key2, val2 ...)");
+    exit 1;
+  }
+
+  tie_dbm(O_RDWR);
+
+  my %new = @ARGV;
+  while (my ($key, $value) = each %new) {
+    $hash{$key} = $value;
+  }
+}
+elsif ($action =~ /^(remove|delete|wipe|erase)$/) {
+  tie_dbm(O_RDWR);
+  unless (@ARGV) {
+    usage("`$action' needs at least one argument.");
+    exit 1;
+  }
+  delete @hash{@ARGV};
+}
+elsif ($action =~ /^(list|lookup|get|fetch)$/) {
+  tie_dbm(O_RDONLY);
+  my @keys = @ARGV;
+  @keys = keys %hash unless @keys;
+  foreach my $key (@keys) {
+    print_key_val($key);
+  }
+}
+elsif ($action =~ /^(find|search)$/) {
+  unless (@ARGV == 1) {
+    usage("`$action' needs exactly one argument.");
+    exit 1;
+  }
+  my $re = $ARGV[0];
+  tie_dbm(O_RDONLY);
+  foreach my $key (keys %hash) {
+    print_key_val($key) if $key =~ /$re/o;
+  }
+}
+elsif ($action eq 'edit') {
+  if (@ARGV) {
+    usage("`$action' doesn't take any arguments.");
+    exit 1;
+  }
+
+  tie_dbm(O_RDWR);
+
+  my $dbm_file_name = $dbm_file;
+  $dbm_file_name =~ s,.*/,,;
+  # FIXME: get proper safe $tmpfile
+  my $tmpfile = "/tmp/dbmedit.$dbm_file_name.$$";
+  my $editor  = $ENV{VISUAL} || $ENV{EDITOR} || 'emacs -nw';
+  open(TMP, ">$tmpfile")
+    or die "Couldn't open $tmpfile for writing: $!\n";
+  while (my ($key, $value) = each %hash) {
+    print TMP join ', ', map maybe_quote($_), $key, $value;
+    print TMP "\n";
+  }
+  close(TMP);
+  my ($mtime_before) = (stat $tmpfile)[9];
+  system "$editor $tmpfile";
+  my ($mtime_after) = (stat $tmpfile)[9];
+  if ($mtime_before != $mtime_after) {
+    open(TMP, $tmpfile)
+      or die "Couldn't open $tmpfile for reading: $!\n";
+    %hash = ();
+    while (<TMP>) {
+      chomp;
+      my $line = $_;
+      my @words = parse_line(',\s*', 0, $line);
+      unless (@words == 2) {
+        warn "Line didn't contain key and value and nothing else; " .
+             "ignoring:\n$line\n";
+        next;
+      }
+      $hash{$words[0]} = $words[1];
+    }
+    close(TMP);
+  }
+  else {
+    print "Nothing modified.\n";
+  }
+  unlink $tmpfile or warn "Couldn't unlink('$tmpfile'): $!\n";
+}
+elsif ($action eq 'clear') {
+  tie_dbm(O_RDWR);
+  unless ("@ARGV" eq 'everything yes really') {
+    usage("You must invoke $action exactly as shown below.");
+    exit 1;
+  }
+  %hash = ();
+}
+else {
+  usage("Action `$action' not recognised.");
+  exit 1;
+}
+
+untie %hash;
+
+exit 0;
+
+sub usage {
+  my ($text) = @_;
+
+  print "$text\n\n" if $text;
+  
+  print <<EOF;
+Usage: dbm [ -t|--type=<dbm_type> ] <dbm_file> <action> [ <option> ... ]
+   Actions:
+      initialize                      (synonyms: create)
+      set <key> <value>               (synonyms: add change)
+      remove <key> [ <key> ... ]      (synonyms: delete, wipe, erase)
+      list [ <key> ... ]              (synonyms: get, fetch, lookup)
+      find <regexp>                   (synonyms: search)
+      edit
+      clear everything yes really
+
+Actions can be abbreviated.
+EOF
+}
+
+sub tie_dbm_bare {
+  my ($flags) = @_;
+  tie %hash, $type, $dbm_file, $flags, 0600;
+}
+
+sub tie_dbm {
+  my ($flags) = @_;
+  tie_dbm_bare($flags);
+  die "tie() to $dbm_file failed: $!\n" unless tied %hash;
+}
+
+sub maybe_quote {
+  my ($in) = @_;
+  
+  if ($in =~ s/"/\\"/g || $in =~ s/'/\\'/g) {
+    return qq{"$in"};
+  }
+  else {
+    return $in;
+  }
+}
+
+sub has_EXISTS {
+  my $pkg = ref tied %hash;
+  {
+    no strict 'refs';
+    
+    if ($pkg eq 'AnyDBM_File') {
+      foreach my $mod (@{"${pkg}::ISA"}) {
+        next unless $mod =~ /_File$/;
+        return 1 if defined &{"${mod}::EXISTS"};
+      }
+      return 0;
+    }
+    else {
+      return defined &{"${pkg}::EXISTS"};
+    }
+  }
+}
+  
+sub print_key_val {
+  my $key = shift;
+
+  my $val;
+  if (has_EXISTS() && ! exists $hash{$key}) {
+    $val = '__non-existant__';
+  }
+  else {
+    $val = defined $hash{$key} ? $hash{$key} : '__undef__';
+  }
+  
+  print "$key, $val\n";
+}

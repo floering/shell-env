@@ -1,0 +1,103 @@
+#!/opt/perl-5.6.1/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Mail::Send;
+
+use lib '/home/lonlxadm/lib/perl5';
+use Rcs;
+
+my %opts;
+die <<EOF unless GetOptions(\%opts, 'mail') and @ARGV;
+Usage: $0 [--mail] <file> [<file> ...]
+Options:
+  --mail  Send reminder e-mail to lock owners
+EOF
+
+my $short = (@ARGV == 1);
+
+my %lockers;
+my %seen;
+foreach my $file (@ARGV) {
+  unless (-e $file) {
+    warn "File '$file' does not exist; skipping.\n";
+    next;
+  }
+  unless (-f $file) {
+    warn "'$file' is not a file; skipping.\n";
+    next;
+  }
+  my $rcsfile = find_rcs($file);
+  next unless $rcsfile;
+  next if $seen{$rcsfile}++;
+  my $rcs     = Rcs->new($rcsfile);
+  my $locker  = $rcs->lock;
+  if ($locker) {
+    print $short ? "$locker\n" : "$file locked by $locker\n";
+    push @{ $lockers{$locker} }, $file;
+  }
+}
+
+if ($opts{mail}) {
+  while (my ($locker, $files) = each %lockers) {
+    my $msg = new Mail::Send Subject => "automated warning: you have RCS files locked";
+    my $address = "$locker\@lehman.com";
+    $msg->to($address);
+    my $fh = $msg->open;
+    my $file = @$files == 1 ? 'file' : 'files';
+    print $fh <<EOMSG;
+This is an automated email to remind you that you have the following
+$file locked under RCS:
+
+EOMSG
+    print $fh "  $_\n" foreach @$files;
+    if (@$files == 1) {
+      print $fh <<EOMSG;
+
+If you have finished editing it, please check it back in.
+Thanks.
+EOMSG
+    }
+    else {
+      print $fh <<EOMSG;
+
+If you have finished editing any of them, please check them back in.
+Thanks.
+EOMSG
+    }
+
+    print $fh <<EOMSG;
+
+To see changes not yet checked in:
+
+    rcsdiff $file
+
+To check in changes, do:
+
+    ci -u $file   # stands for Check In and leave working file Unlocked
+
+To revert to the previous version, do:
+
+    co -u $file   # stands for Check Out and leave working file Unlocked
+
+If you don't like having to remember all this, get used to editing
+RCS-controlled files with the 'viz' utility.
+EOMSG
+    
+    $fh->close;
+    print "Sent mail to $address\n";
+  }
+}
+
+sub find_rcs {
+  my ($file) = @_;
+  return $file if $file =~ /,v$/;
+  (my $rcsfile = $file) =~ s!([^/]+)$!RCS/$1,v!;
+  return $rcsfile if -e $rcsfile;
+  $rcsfile = "$file,v";
+  return $rcsfile if -e $rcsfile;
+  warn "Couldn't find RCS file for $file\n";
+  return undef;
+}

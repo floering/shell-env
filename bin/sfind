@@ -1,0 +1,3 @@
+#!/bin/sh
+
+find "$@" -follow -type f -o -type l | so

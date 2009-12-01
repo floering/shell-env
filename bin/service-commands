@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -e
+
+me="service-commands"
+mode=`basename $0`
+
+if [ "$mode" = "$me" ] && [ -z "$*" ]; then
+  here=`dirname $0`
+  echo -n "Setting up handy service shortcuts in $here ... "
+  cd "$here"
+  for op in s{re,rl,st,sp,sta}; do
+    if ! [ -e $op ]; then
+        ln -s $me $op
+        echo -n " $op"
+    fi
+  done
+  echo
+  exit 0
+fi
+
+case "$mode" in
+  sre)  op=restart ;;
+  srl)  op=reload  ;;
+  sst)  op=start   ;;
+  ssp)  op=stop    ;;
+  ssta) op=status  ;;
+  *)   echo "$0: BUG with mode '$mode'"; exit 1 ;;
+esac
+
+service="$1"
+shift
+
+if [ "`id -u`" != 0 ]; then
+  # 'ave a go son
+  sudo=sudo
+else
+  sudo=
+fi
+
+if [ -x /sbin/service ]; then
+  # Red Hat
+  exec $sudo /sbin/service "$service" $op "$@"
+else
+  # others, e.g. SUSE
+  exec $sudo /etc/init.d/"$service" $op "$@"
+fi

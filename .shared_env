@@ -1,0 +1,180 @@
+#!/bin/sh
+#
+# Adam's shared environment startup file
+#
+# $Id: .shared_env,v 1.81 2008-09-03 15:03:13 adam Exp $
+#
+# This should get run as part of setting up the environment
+# of any sh-compatible shell, including non-interactive ones;
+# hence it should be kept as fast and as portable as possible.
+# Note that that means silly things like [ ! -e foo ] rather
+# than ! [ -e foo ] ...
+
+# Allow disabling of entire environment suite
+[ -n "$INHERIT_ENV" ] && return 0
+
+[ -n "$shared_env_loaded" ] && return 0
+
+# {{{ Are we interactive?
+
+case "$-" in
+  *i*) shell_interactive=y ;;
+    *) shell_interactive=  ;;
+esac
+
+# }}}
+
+# {{{ Loading status
+
+#[ "$shell" = -zsh ] && unsetopt function_argzero
+
+# Default to 1, and treat empty as 0.  This ensures we have an integer.
+: ${DEBUG_LOCAL_HOOKS=1}
+: ${DEBUG_LOCAL_HOOKS:=0}
+
+sh_load_status () {
+  # Find the name of the running shell
+  _this_shell=${shell:-${0##*/}}
+
+  # Find the filename of the running script
+  if [ -n "$BASH_SOURCE" ]; then
+    _this_script="${BASH_SOURCE[0]}"
+    # Deduct 1 because array starts at 0, and another 1 because
+    # we want to ignore this stack frame (inside sh_load_status)
+    _this_script="${BASH_SOURCE[$(( ${#BASH_SOURCE[@]} - 2))]}"
+    # Sheesh.  $ZSH_SOURCE[-2], anyone?
+  else
+    _this_script="$0"
+    # Unfortunately in zsh there seems to be no way of determining
+    # the currently running file if a function is being run, unless
+    # function_argzero is unset :-/
+    [ "$_this_script" = sh_load_status ] && _this_script=
+    [ "$_this_script" = -zsh ] && _this_script=
+  fi
+  [ -n "$_this_script" ] && _this_script="[$_this_script]"
+
+  # Leave status printed?
+  
+  if [ "$DEBUG_LOCAL_HOOKS" -ge 2 ]; then
+    debug="\n"
+  fi
+  
+  # \e[0K is clear to right
+  if [ -n "$shell_interactive" ]; then
+    _text="${_this_shell}${_this_script}: $*... "
+    _text="${_text//\/home\//~}"
+    echo -e -n "\r\e[0K$_text$debug"
+  fi
+}
+
+# }}}
+
+sh_load_status .shared_env
+
+# {{{ ZDOTDIR, ZDOTDIRPATH, ZDOTUSER
+
+# See .zshenv
+
+zdotdir=${ZDOTDIR:-$HOME}
+ZDOTDIR="$zdotdir"
+ZDOT_RUN_HOOKS="$ZDOTDIR/.zsh/functions/run_hooks"
+ZDOT_FIND_HOOKS="$ZDOTDIR/.zsh/functions/find_hooks"
+export ZDOTDIR ZDOT_RUN_HOOKS ZDOT_FIND_HOOKS
+
+# Define a search path to be used by run_hooks
+if [ "$ZDOTDIR" = "$HOME" ]; then
+  ZDOTDIRPATH=$ZDOTDIR
+  ZDOTDIRREVPATH=$ZDOTDIR
+else
+  OTHER_USER=1
+  export OTHER_USER
+  ZDOTDIRPATH="$ZDOTDIR $HOME"
+  ZDOTDIRREVPATH="$HOME $ZDOTDIR"
+fi
+export ZDOTDIRPATH ZDOTDIRREVPATH
+
+[ -z "$ZDOTUSER" ] && [ -e ~/.zdotuser ] && ZDOTUSER=`cat ~/.zdotuser`
+export ZDOTUSER
+
+# }}}
+
+# {{{ HOST / HOSTNAME
+
+: ${HOST:=${HOSTNAME:-`hostname`}}
+: ${HOSTNAME:=$HOST}
+
+# Let's not make this *too* sticky because dhcp might change the host
+#export HOST HOSTNAME
+
+# }}}
+# {{{ USER / USERNAME
+
+# zsh sets USERNAME, GROUPS, and E?[UG]ID
+# bash only sets E?UID
+USER=${USERNAME:-`id -un`}
+: ${USERNAME:=$USER}
+export USER USERNAME
+
+# }}}
+# {{{ PATH
+
+# Don't trust system-wide PATH?  Remember what it was, for reference.
+syspath=$HOME/.syspath.$HOST
+if [ ! -e $syspath ]; then
+    # Ignore failed write as home directory is sometimes locked down
+    # cross-WAN.
+    echo "$PATH" 2>/dev/null > "$syspath" 
+fi
+PATH=/usr/local/bin:/usr/X11R6/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+
+# ... or *do* trust system-wide PATH
+#PATH=/usr/local/bin:/usr/X11R6/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH
+
+. $ZDOTDIR/.zsh/functions/enable_wordsplit
+newpaths=
+for dir in $ZDOTDIRREVPATH; do
+  for newpath in                        \
+                 $dir/sbin              \
+                 $dir/bin               \
+                 $dir/local/$OSTYPE/bin \
+                 $dir/local/sbin        \
+                 $dir/local/bin         \
+  ; do
+    if [ -d $newpath ]; then
+        if [ -z "$newpaths" ]; then
+            newpaths=$newpath
+        else
+            newpaths=$newpaths:$newpath
+        fi
+    fi
+  done
+done
+restore_wordsplit
+PATH=$newpaths:$PATH
+
+# }}}
+# {{{ MANPATH
+
+# In order to avoid forks here, this is done in .zshrc
+
+# }}}
+# {{{ grep
+
+# Why would you ever want grep to treat dirs like normal files?
+export GREP_OPTIONS='--directories=skip --color=auto'
+
+# }}}
+# {{{ OSTYPE
+
+# Can come in handy too, if the shell sets it (bash and zsh do).
+export OSTYPE
+
+# }}}
+
+. $ZDOT_RUN_HOOKS .shared_env.d
+
+if [ -n "$shell_interactive" ]; then
+    . $ZDOTDIR/.shared_rc
+fi
+
+shared_env_loaded=y

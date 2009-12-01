@@ -1,0 +1,15 @@
+#!/bin/sh
+
+case "$OSTYPE" in
+  solaris*) exec ptree     "$@" | less -rS ;;
+         *) if which pstree 2>&1 >/dev/null; then
+              ascii=
+              pstree --help 2>&1 | grep -q -- '-A .*ASCII' && ascii=-A
+              LANG=C pstree $ascii -p "$@" | less -rS
+            else
+              echo "pstree not found."
+              exit 1
+            fi
+            ;;
+esac
+

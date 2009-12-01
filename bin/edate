@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# epoch date
+
+if [ -n "$1" ]; then
+  date +%s -d "$*"
+else
+  date +%s
+fi
+

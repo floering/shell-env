@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Assume on-line if unknown
+AC-state | egrep -q 'on-line|unknown'

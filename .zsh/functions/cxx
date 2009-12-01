@@ -1,0 +1,5 @@
+#autoload
+
+# Pop a title, and optionally push a new one.
+(( $#titles )) && shift titles
+cx "$@"

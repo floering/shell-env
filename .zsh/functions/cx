@@ -1,0 +1,105 @@
+#autoload
+
+# can't be bothered to support this on old zshs
+
+if [[ "$ZSH_VERSION_TYPE" == 'old' ]]; then
+  echo "\nThis zsh doesn't support typeset -T; disabling cx."
+  cx () { }
+  return 1
+fi
+
+cx () {
+  local short_host title_host short_from_opts suffix isuffix ssuffix
+
+  # Ensure the typeset -gT doesn't result in titles=( '' )
+  [[ -z "$TITLES"  ]] && unset TITLES
+
+  # Now safe to bind TITLES to titles.
+  (( $+titles )) || typeset -gT TITLES titles
+
+  : ${TITLE_SHLVL:=$SHLVL}
+  export TITLE_SHLVL
+
+  if [[ "$SHLVL" != "$TITLE_SHLVL" ]]; then
+    # We've changed shell; assume that the most recently pushed entry
+    # is the starting point for the new shell.
+    TITLE_SHLVL=$SHLVL
+    [[ ${(t)titles} == 'array' ]] && [[ -n "$TITLES" ]] && titles=( "$TITLES" )
+  fi
+
+  short_host=${HOST%%.*}
+
+  # We use the fact that the environment variable TITLE_SHLVL can
+  # cross process boundaries, even though the array doesn't.
+  export TITLES
+
+  if (( $# == 0 )); then
+    # restore current setting
+    if (( $#titles == 0 )); then
+      new_title=
+    else
+      new_title="$titles[1]"
+    fi
+  else
+    # push new setting
+
+    # N.B. we allow pushing of "" to force default
+    new_title="$*"
+
+    if (( $#titles )); then
+      titles=( "$new_title" "$titles[@]" )
+    else
+      titles=( "$new_title" )
+    fi
+  fi
+
+  # Determine suffix.  Allow force appending of auto-suffix via -l
+  # (either from $argv or from saved title)
+  if [[ "$new_title" == -l* || -z "$new_title" ]]; then
+    if [[ -o kshglob ]]; then
+        restore_kshglob='setopt kshglob'
+      else
+        restore_kshglob='setopt nokshglob'
+      fi
+    setopt kshglob
+    new_title="${new_title##-l?( )}"
+    eval $restore_nullglob
+
+    if [[ "$USERNAME" == 'root' ]]; then
+      suffix="${short_host}#"
+    else
+      suffix="$USERNAME@${short_host}"
+    fi
+
+    # w/i/s == window/icon/screen
+    wsuffix=" : $suffix"
+    isuffix=" : $suffix"
+    ssuffix="|$suffix"
+  else
+    suffix=
+  fi
+
+  if [[ -z "$new_title" ]]; then
+    # w/i/s == window/icon/screen
+    full_wtitle="$suffix"
+    full_ititle="$suffix"
+    full_stitle="$suffix"
+  else
+    # w/i/s == window/icon/screen
+    full_wtitle="$new_title$wsuffix"
+    full_ititle="$new_title$isuffix"
+    full_stitle="$new_title$ssuffix"
+  fi
+
+  tmp=$DEBUG_LOCAL_HOOKS
+  DEBUG_LOCAL_HOOKS= run_hooks .zsh/cx.d
+  DEBUG_LOCAL_HOOKS=$tmp
+
+  set_title window "$full_wtitle"
+  set_title icon "$full_ititle"
+  [[ -n "$IN_SCREEN" ]] && 
+    set_title screen "$full_stitle"
+  return 0
+}
+
+cx "$@"
