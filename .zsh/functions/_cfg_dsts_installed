@@ -1,0 +1,5 @@
+#autoload
+
+local expl
+_description cfg_dsts expl 'config package destinations installed'
+_files "$expl[@]" -W ~/.cfg

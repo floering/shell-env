@@ -1,0 +1,3 @@
+#compdef rql
+
+_rq "$@"

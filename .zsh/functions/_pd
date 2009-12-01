@@ -1,0 +1,4 @@
+#compdef pd
+
+words[0]=perldoc
+_perldoc "$@"

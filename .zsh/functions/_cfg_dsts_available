@@ -1,0 +1,7 @@
+#compdef cfgctl rcup rct rcq
+
+_cfg_dsts_available=( $( cfgctl -d | grep -v '^#' ) )
+
+local expl
+_description cfg_dsts expl 'config package destinations available'
+compadd "$expl[@]" -a _cfg_dsts_available

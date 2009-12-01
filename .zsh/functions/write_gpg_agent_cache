@@ -1,0 +1,8 @@
+#autoload
+
+_dga_cache=$HOME/.gnupg/agent.info-$HOST
+cat >| $_dga_cache <<EOF
+GPG_AGENT_INFO="$GPG_AGENT_INFO"; export GPG_AGENT_INFO
+EOF
+
+echo "Wrote to $_dga_cache: $GPG_AGENT_INFO"

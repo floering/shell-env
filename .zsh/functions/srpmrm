@@ -1,0 +1,17 @@
+# {{{ Uninstalling src.rpms
+
+# This uninstalls a src.rpm.  Unfortunately it needs the original
+# src.rpm to be supplied as a parameter.
+srpmrm () {
+  local rpmnameroot rpm
+  rpm -qpl $1 | grep -v '\.spec$' | xargs -i rm /usr/src/redhat/SOURCES/{}
+  rpm -qpl $1 | grep '\.spec$' | xargs -i rm /usr/src/redhat/SPECS/{}
+  rpmnameroot=${${1:t}%%-*}
+  foreach rpm in /usr/src/redhat/BUILD/${rpmnameroot}*; do
+    echo $rpm | xargs -p -i rm -rf {}
+  done
+}
+
+srpmrm "$@"
+
+# }}}

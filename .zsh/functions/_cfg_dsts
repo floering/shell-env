@@ -1,0 +1,7 @@
+#compdef rcd
+
+local expl
+_description cfg_dsts expl 'config package destinations'
+_cfg_dsts_available "$expl[@]" "$@"
+_cfg_dsts_installed "$expl[@]" "$@"
+

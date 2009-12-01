@@ -1,0 +1,7 @@
+#autoload
+
+_cfg_srcs_available=( $( cfgctl -s ) )
+
+local expl
+_description cfg_srcs expl 'config package sources available'
+compadd "$expl[@]" -a _cfg_srcs_available

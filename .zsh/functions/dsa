@@ -1,0 +1,18 @@
+#autoload
+
+# dsa - Detect Ssh Agent (and ensure it has an identity)
+
+detect_ssh_agent || return 1
+
+if ssh-add -l >& /dev/null; then
+    #echo "ssh-agent pid $SSH_AGENT_PID has an identity already"
+    return 0
+fi
+
+if ! [[ -t 0 ]]; then
+    echo "No identities in ssh-agent pid $SSH_AGENT_PID but STDIN not a tty so can't add one :-(" >&2
+    return 1
+fi
+
+echo "ssh-agent pid $SSH_AGENT_PID has no identities; please add one ..."
+ssh-add

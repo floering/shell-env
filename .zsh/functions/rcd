@@ -1,0 +1,10 @@
+#autoload
+
+if [[ "$#" -ne 1 ]]; then
+    echo "Usage: rcd <config pkg target>" >&2
+    return 1
+fi
+
+cd $zdotdir/.cfg/"$1"
+
+

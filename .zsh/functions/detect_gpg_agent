@@ -1,0 +1,13 @@
+#autoload
+
+gpg_agent_valid && return 0
+
+_dga_cache=$HOME/.gnupg/agent.info-$HOST
+
+if [[ -r "$_dga_cache" ]]; then
+    source "$_dga_cache"
+    echo "Read from $_dga_cache: $GPG_AGENT_INFO"
+    gpg_agent_valid && return 0
+fi
+
+recalc_gpg_agent_cache

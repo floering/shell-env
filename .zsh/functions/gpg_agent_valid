@@ -1,0 +1,43 @@
+#autoload
+
+local giveup='Cannot check validity of gpg-agent settings; assuming OK.'
+
+if ( ! true ); then
+  echo 'zsh has ( ! true ) negated subshell bug!'
+# Have rewritten the below so this doesn't matter.  Still
+# nice to be alerted to it now and again though.
+#   echo $giveup
+#   return 0
+fi
+
+if [[ -z "$GPG_AGENT_INFO" ]]; then
+  echo '$GPG_AGENT_INFO not set.'
+  return 1
+fi
+
+if ! [[ -e /proc ]]; then
+  echo "/proc didn't exist!"
+  echo $giveup
+  return 0
+fi
+
+GPG_AGENT_SOCK="${GPG_AGENT_INFO%:1}"
+GPG_AGENT_PID="${GPG_AGENT_SOCK##*:}"
+GPG_AGENT_SOCK="${GPG_AGENT_SOCK%:$GPG_AGENT_PID}"
+
+if [[ ! -e /proc/$GPG_AGENT_PID ]]; then
+  echo "\$GPG_AGENT_PID set to non-existent pid ($GPG_AGENT_PID)."
+  return 1
+fi
+
+if [[ ! -e /proc/$GPG_AGENT_PID/cmdline ]]; then
+  echo "/proc/$GPG_AGENT_PID/cmdline doesn't exist!"
+  return 1
+fi
+
+if ! grep -q gpg-agent /proc/$GPG_AGENT_PID/cmdline; then
+  echo "/proc/$GPG_AGENT_PID/cmdline wrong"
+  return 1
+fi
+
+[[ -S "$GPG_AGENT_SOCK" ]]

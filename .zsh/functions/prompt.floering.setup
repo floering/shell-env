@@ -1,0 +1,76 @@
+# floering prompt theme - borrowed much from clint
+
+prompt_floering_help () {
+  cat <<'EOF'
+
+  prompt clint [<color1> [<color2> [<color3> [<color4> [<color5>]]]]]
+
+  defaults are red, cyan, green, yellow, and white, respectively.
+
+EOF
+}
+
+prompt_floering_setup () {
+  local -a pcc
+  local -A pc
+  local p_date p_tty p_plat p_ver p_userpwd p_apm p_shlvlhist p_rc p_end p_win
+
+  pcc[1]=${1:-'red'}
+  pcc[2]=${2:-'cyan'}
+  pcc[3]=${3:-'green'}
+  pcc[4]=${4:-'yellow'}
+  pcc[5]=${5:-'white'}
+
+  pc['\[']="%{$fg_bold[$pcc[1]]%}["
+  pc['\]']="%{$fg_bold[$pcc[1]]%}]"
+  pc['<']="%{$fg_bold[$pcc[1]]%}<"
+  pc['>']="%{$fg_bold[$pcc[1]]%}>"
+  pc['\(']="%{$fg_bold[$pcc[1]]%}("
+  pc['\)']="%{$fg_bold[$pcc[1]]%})"
+
+  p_date="$pc['\[']%{$fg_bold[$pcc[2]]%}%D{%a %y/%m/%d %R %Z}$pc['\]']"
+  p_tty="$pc['\[']%{$fg_bold[$pcc[2]]%}%l$pc['\]']"
+  p_plat="$pc['\[']%{$fg_bold[$pcc[2]]%}${MACHTYPE}/${OSTYPE}/$(uname -r)$pc['\]']"
+  p_ver="$pc['\[']%{$fg_bold[$pcc[2]]%}${ZSH_VERSION}$pc['\]']"
+
+  [[ -n "$WINDOW" ]] && p_win="$pc['\(']%{$fg_bold[$pcc[4]]%}$WINDOW$pc['\)']"
+
+  p_userpwd="$pc['\[']%{$fg_bold[$pcc[3]]%}%n@%m$p_win%{$fg_bold[$pcc[5]]%}:%{$fg_bold[$pcc[4]]%}%~$pc['\]']"
+  p_git="%(2v.-%U%2v%u-.)"
+#  p_git=$(get_git_prompt_info %b)
+
+  p_shlvlhist="$pc['\[']%{$fg_bold[$pcc[5]]%}zsh%(2L./$SHLVL.)$pc['\]']$pc['\[']%{$fg_bold[$pcc[5]]%}%h$pc['\]']"
+  p_rc="%(?..[%?%1v] )"
+  p_end="%{$reset_color%}%B%#%b %{$fg_bold[$pcc[2]]%}"
+
+  POSTEDIT="$reset_color"
+
+  prompt="
+$p_date$p_tty$p_plat$p_ver
+$p_userpwd
+$p_shlvlhist$p_rc$p_git$p_end"
+  PS2='%(4_.\.)%3_> %E'
+
+# make sure you do this in your precmd somewhere!
+#  precmd () { prompt_floering_precmd }
+#  preexec () { }
+}
+
+prompt_floering_precmd () {
+  setopt noxtrace noksharrays localoptions
+  local exitstatus=$?
+  local git_dir git_ref
+
+  psvar=()
+  [[ $exitstatus -ge 128 ]] && psvar[1]=" $signals[$exitstatus-127]" ||
+	psvar[1]=""
+
+  [[ -o interactive ]] && jobs -l
+
+  git_dir=$(git-rev-parse --git-dir 2> /dev/null) || return
+  git_ref=$(git-symbolic-ref HEAD 2> /dev/null) || git_ref="(no branch)"
+  psvar[2]=${git_ref#refs/heads/}
+
+}
+
+prompt_floering_setup "$@"

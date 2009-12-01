@@ -1,0 +1,20 @@
+#autoload
+
+# dga - Detect Gpg Agent (and ensure it has an identity)
+
+which gpg-agent >& /dev/null || return 1
+
+detect_gpg_agent || return 1
+
+# if gpg-add -l >& /dev/null; then
+#     #echo "gpg-agent pid $GPG_AGENT_PID has an identity already"
+#     return 0
+# fi
+
+# if ! [[ -t 0 ]]; then
+#     echo "No identities in gpg-agent pid $GPG_AGENT_PID but STDIN not a tty so can't add one :-(" >&2
+#     return 1
+# fi
+
+# echo "gpg-agent pid $GPG_AGENT_PID has no identities; please add one ..."
+# gpg-add
