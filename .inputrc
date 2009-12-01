@@ -1,6 +1,5 @@
 # Ben's .inputrc
 #
-# $Id: .inputrc,v 1.3 2003-10-29 10:55:14 adams Exp $
 
 Meta-p: history-search-backward
 Meta-n: history-search-forward

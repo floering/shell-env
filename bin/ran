@@ -4,7 +4,6 @@
 #
 # Adam Spiers <ran@adamspiers.org>
 #
-# $Id: ran,v 1.5 2003-03-30 13:50:59 adams Exp $
 
 use Getopt::Long;
 my %opts;

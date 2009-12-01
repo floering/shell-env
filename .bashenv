@@ -1,10 +1,7 @@
 #!/bin/bash
 #
-# Ben's .bashenv
+# Ben's .bashenv to simulate .zshenv
 #
-# to simulate .zshenv
-#
-# $Id: .bashenv,v 1.14 2006-03-13 10:58:14 adam Exp $
 
 # .bashenv is invoked by all interactive non-csh-style shells via
 # .profile, and hopefully all non-interactive shells too, but don't

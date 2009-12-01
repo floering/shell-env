@@ -17,8 +17,6 @@
 ## http://www.gnu.org/ or write to the Free Software Foundation, Inc.,
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##
-## $Id: tailfgrep,v 1.11 2002-12-02 09:33:20 adams Exp $
-## 
 
 # TODO:
 #   - extend to multiple patterns (one for each file?)

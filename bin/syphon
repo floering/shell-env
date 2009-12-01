@@ -98,8 +98,6 @@ I needed the "in-place" feature though.
 
 =head1 VERSION
 
-$Id: syphon,v 1.7 2005-01-06 00:45:32 adam Exp $
-
 =head1 LICENSE
 
 Copyright (c) 2003 Adam Spiers <adam@spiers.net>.  All rights

@@ -2,8 +2,6 @@
 #
 # Ben's shared environment startup file
 #
-# $Id: .shared_env,v 1.81 2008-09-03 15:03:13 adam Exp $
-#
 # This should get run as part of setting up the environment
 # of any sh-compatible shell, including non-interactive ones;
 # hence it should be kept as fast and as portable as possible.

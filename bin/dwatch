@@ -28,8 +28,6 @@ and/or modify it under the same terms as Perl itself.
 
 =head1 VERSION
 
-$Id: dwatch,v 1.6 2004-05-05 13:57:03 adams Exp $
-
 =cut
 
 use strict;

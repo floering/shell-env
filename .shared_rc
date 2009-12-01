@@ -2,8 +2,6 @@
 #
 # Ben's shared interactive environment startup file
 #
-# $Id: .shared_rc,v 1.2 2008-07-16 09:41:13 adam Exp $
-#
 # This should get run as part of setting up the interactive
 # environment of any sh-compatible shell; hence it should be kept as
 # fast and as portable as possible.  Note that that means silly things

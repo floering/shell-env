@@ -1,4 +1,3 @@
-# $Id: .bashrc,v 1.57 2009-11-20 14:09:21 adam Exp $
 #
 # Ben's .bashrc   --  converted on 6/29/06 from default .cshrc 
 #                 --  modified on 4/2/07 for non-interactive

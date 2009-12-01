@@ -11,8 +11,6 @@
 # reserved. This program is free software; you can redistribute it
 # and/or modify it under the same terms as Perl itself.
 #
-# $Id: wget-monitor,v 1.5 2004-05-05 11:39:08 adams Exp $
-#
 
 use strict;
 use warnings;

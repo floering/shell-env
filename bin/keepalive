@@ -5,7 +5,6 @@
 # which needs to be kept alive and that's done via shiver-pointer on
 # the client WM.
 #
-# $Id: keepalive,v 1.5 2005-11-10 17:10:07 adam Exp $
 
 use strict;
 use warnings;
