@@ -1,8 +1,0 @@
-instructions on how to merge adam's settings into this repository
-
-- git checkout vendor/adamspiers (you already did this probably)
-- run the 'adamspiers-scrape.pl' script
-- git commit -a -v
-- git checkout master
-- git merge vendor/adamspiers
-
