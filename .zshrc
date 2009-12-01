@@ -1,20 +1,26 @@
 #!/bin/zsh
 #
-# $Id: .zshrc,v 1.314 2007/02/14 12:21:58 floering Exp $
+# .zshrc
+# for zsh 3.1.6 and newer (may work OK with earlier versions)
 #
-# Ben's uber-zshrc, mostly derived from Adam Spiers' setup, modified
-# from my old (early 90s) IBM setup for AMD.  NOTE: if you want to have the 
-# crazy-cool color prompt randomizer you must use a supported font for
-# the "fade" and "fire" prompts to work correctly.
-# See zsh/prompts in my home directory.  I recommend the fkp font but 
-# the vga11x19 font is larger for those who like large fonts.  You might 
-# want to check out my .Eterm directory for an example terminal setup.
-
-# to get the nice fonts run the alias "nicefonts" and restart your terminal
-# window with the "fkp" (my favorite) or other fonts in /home/floering/X_fonts
-# (This dir is replicated to all sites I have access to: SVDC, BDC, LSDC (Austin), MHDC)
+# by Adam Spiers <adam@spiers.net>
+#
+# Best viewed in emacs folding mode (folding.el).
+# (That's what all the # {{{ and # }}} are for.)
+#
+# $Id: .zshrc,v 1.332 2009-10-29 10:20:44 adam Exp $
+#
 
 [ -n "$INHERIT_ENV" ] && return 0
+
+# {{{ To do list
+
+#
+#    - du1
+#    - Do safes?kill(all)? functions
+#
+
+# }}}
 
 sh_load_status .zshrc
 
@@ -64,7 +70,7 @@ setopt                       \
      NO_brace_ccl            \
         correct_all          \
      NO_bsd_echo             \
-     NO_cdable_vars          \
+        cdable_vars          \
      NO_chase_links          \
      NO_clobber              \
         complete_aliases     \
@@ -84,12 +90,11 @@ setopt                       \
         glob_complete        \
      NO_glob_dots            \
         glob_subst           \
-        hash_cmds            \
+     NO_hash_cmds            \
         hash_dirs            \
         hash_list_all        \
         hist_allow_clobber   \
         hist_beep            \
-        hist_expire_dups_first \
         hist_ignore_dups     \
         hist_ignore_space    \
      NO_hist_no_store        \
@@ -108,7 +113,7 @@ setopt                       \
      NO_mark_dirs            \
      NO_menu_complete        \
         multios              \
-        nomatch              \
+     NO_nomatch              \
         notify               \
      NO_null_glob            \
         numeric_glob_sort    \
@@ -215,8 +220,8 @@ WORDCHARS=''
 # {{{ Save a large history
 
 HISTFILE=~/.zshhistory
-HISTSIZE=20000
-SAVEHIST=20000
+HISTSIZE=3000
+SAVEHIST=3000
 
 # }}}
 # {{{ Maximum size of completion listing
@@ -246,6 +251,55 @@ TMOUT=1800
 # }}}
 
 # }}}
+# {{{ Prompts
+
+# Load the theme-able prompt system and use it to set a prompt.
+# Probably only suitable for a dark background terminal.
+
+local _find_promptinit
+_find_promptinit=( $^fpath/promptinit(N) )
+if (( $#_find_promptinit >= 1 )) && [[ -r $_find_promptinit[1] ]]; then
+  sh_load_status 'prompt system'
+
+  autoload -U promptinit
+  promptinit
+
+  PS4="trace %N:%i> "
+  #RPS1="$bold_colour$bg_red              $reset_colour"
+
+  # Default prompt style
+  adam2_colors=( white cyan cyan green )
+
+  if [[ -r $zdotdir/.zsh_prompt ]]; then
+    . $zdotdir/.zsh_prompt
+  fi
+
+  if [[ -r /proc/$PPID/cmdline ]] &&
+       egrep -q 'watchlogs|kates|nexus|vga' /proc/$PPID/cmdline;
+  then
+    # probably OK for fancy graphic prompt
+    if [[ "`prompt -h adam2`" == *8bit* ]]; then
+      prompt adam2 8bit $adam2_colors
+    else
+      prompt adam2 $adam2_colors
+    fi
+  else
+    if [[ "`prompt -h adam2`" == *plain* ]]; then
+      prompt adam2 plain $adam2_colors
+    else
+      prompt adam2 $adam2_colors
+    fi
+  fi
+
+  # TopGun ssh for Palm
+  if [[ $TERM == tgtelnet ]]; then
+    prompt off
+  fi
+else
+  PS1='%n@%m %B%3~%b %# '
+fi
+
+# }}}
 
 # {{{ Completions
 
@@ -254,7 +308,8 @@ sh_load_status 'completion system'
 # {{{ Set up new advanced completion system
 
 if [[ "$ZSH_VERSION_TYPE" == 'new' ]]; then
-  autoload -U compinit
+  autoload -Uz compinit
+  zstyle :compinstall filename '/home/adam/.zshrc'
   compinit -u # use with care!!
 else
   print "\nAdvanced completion system not found; ignoring zstyle settings."
@@ -321,8 +376,12 @@ zstyle ':completion:*:complete:-command-::commands' ignored-patterns '*\~'
 # {{{ Don't complete uninteresting users
 
 zstyle ':completion:*:*:*:users' ignored-patterns \
-        adm apache bin daemon games gdm halt ident junkbust lp mail mailnull \
-        named news nfsnobody nobody nscd ntp operator pcap postgres radvd \
+        adm amanda apache avahi beaglidx bin cacti canna clamav daemon \
+        dbus distcache dovecot fax ftp games gdm gkrellmd gopher \
+        hacluster haldaemon halt hsqldb ident junkbust ldap lp mail \
+        mailman mailnull mldonkey mysql nagios \
+        named netdump news nfsnobody nobody nscd ntp nut nx openvpn \
+        operator pcap postfix postgres privoxy pulse pvm quagga radvd \
         rpc rpcuser rpm shutdown squid sshd sync uucp vcsa xfs
 
 # ... unless we really want to.
@@ -372,78 +431,31 @@ zstyle ':completion:*:history-words' menu yes
 run_hooks .zsh/users.d
 zstyle ':completion:*' users $zsh_users
 
-## }}}
-## {{{ Adam's Hostname completion
-#
-#if [[ "$ZSH_VERSION_TYPE" == 'new' ]]; then
-#  # Extract hosts from /etc/hosts
-#  : ${(A)_etc_hosts:=${(s: :)${(ps:\t:)${${(f)~~"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]#}}}
-## _ssh_known_hosts=(${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[0-9]*}%%\ *}%%,*})
-#else
-#  # Older versions don't like the above cruft
-#  _etc_hosts=()
-#fi
-#
-#zsh_hosts=(
-#    "$_etc_hosts[@]"
-#    localhost
-#)
-#
-#run_hooks .zsh/hosts.d
-#zstyle ':completion:*' hosts $zs
-#
-## My first hack at hostname completion
-#local knownhosts
-#knownhosts=( ${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[0-9]*}%%\ *}%%,*} )
-#zstyle ':completion:*:(ssh|scp|sftp):*' hosts $knownhostsh_hosts
-#
-# this is for enabling of hostname completion on ssh known_hosts
-# that is apparently not enabled in zsh by default (for shame) but comes
-# for free in bash_completion
+# }}}
+# {{{ Hostnames
 
-test ! -d "$HOME/.ssh" && mkdir "$HOME/.ssh"
-test ! -f "$HOME/.ssh/known_hosts" && touch "$HOME/.ssh/known_hosts"
-test ! -f "$HOME/.ssh/config" && touch "$HOME/.ssh/config"
+if [[ "$ZSH_VERSION_TYPE" == 'new' ]]; then
+  # Extract hosts from /etc/hosts
+  # ~~ no glob_subst -> don't treat contents of /etc/hosts like pattern
+  # (f) shorthand for (ps:\n:) -> split on \n ((p) enables recognition of \n etc.)
+  # %%\#* -> remove comment lines and trailing comments
+  # (ps:\t:) -> split on tab
+  # ##[:blank:]#[^[:blank:]]# -> remove comment lines
+  
+  : ${(A)_etc_hosts:=${(s: :)${(ps:\t:)${${(f)~~"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]#}}}
+# _ssh_known_hosts=(${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[0-9]*}%%\ *}%%,*})
+else
+  # Older versions don't like the above cruft
+  _etc_hosts=()
+fi
 
-zstyle ':completion:*:(scp|rsync):*' tag-order \
-        'hosts:-host hosts:-domain:domain hosts:-ipaddr:IP\ address *'
-zstyle ':completion:*:(scp|rsync):*' group-order \
-        users files all-files hosts-domain hosts-host hosts-ipaddr
-zstyle ':completion:*:ssh:*' tag-order \
-        users 'hosts:-host hosts:-domain:domain hosts:-ipaddr:IP\ address *'
-zstyle ':completion:*:ssh:*' group-order \
-        hosts-domain hosts-host users hosts-ipaddr
+zsh_hosts=(
+    "$_etc_hosts[@]"
+    localhost
+)
 
-zstyle ':completion:*:(ssh|scp|rsync):*:hosts-host' ignored-patterns \
-        '*.*' loopback localhost
-zstyle ':completion:*:(ssh|scp|rsync):*:hosts-domain' ignored-patterns \
-        '<->.<->.<->.<->' '^*.*' '*@*'
-zstyle ':completion:*:(ssh|scp|rsync):*:hosts-ipaddr' ignored-patterns \
-        '^<->.<->.<->.<->' '127.0.0.<->'
-zstyle ':completion:*:(ssh|scp|rsync):*:users' ignored-patterns \
-        adm bin daemon halt lp named shutdown sync
-
-zstyle -e ':completion:*:(ssh|scp|ping|host|nmap|rsync):*' hosts 'reply=(
-        ${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) \
-                        /dev/null)"}%%[#| ]*}//,/ }
-        ${=${(f)"$(cat /etc/hosts(|)(N) <<(ypcat hosts 2>/dev/null))"}%%\#*}
-        ${=${${${${(@M)${(f)"$(<~/.ssh/config)"}:#Host *}#Host }:#*\**}:#*\?*}}
-        )'
-
-#
-# better kill completion:
-#
-
-# kill
-#zstyle ':completion:*:*:kill:*:processes' list-colors "=(#b) #([0-9]#)*=$color[cyan]=$color[red]"
-zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
-zstyle ':completion:*:*:kill:*' menu yes select
-zstyle ':completion:*:kill:*' force-list always
-zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
-zstyle ':completion:*:kill:*' insert-ids single
-zstyle ':completion:*:*:kill:*' menu yes select
-zstyle ':completion:*:kill:*' force-list always
-zstyle ':completion:*:processes' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+run_hooks .zsh/hosts.d
+zstyle ':completion:*' hosts $zsh_hosts
 
 # }}}
 # {{{ (user, host) account pairs
@@ -460,6 +472,7 @@ compdef _pdf pdf
 
 # }}}
 
+# }}}
 # {{{ Aliases and functions
 
 sh_load_status 'aliases and functions'
@@ -627,6 +640,14 @@ compdef _functions reload
 # }}}
 # {{{ ls aliases
 
+if ls -F --color / >&/dev/null; then
+  alias ls='command ls -F --color'
+elif ls -F / >&/dev/null; then
+  alias ls='command ls -F'
+elif ls --color / >&/dev/null; then
+  alias ls='command ls --color'
+fi
+
 # jeez I'm lazy ...
 alias l='ls -lh'
 alias ll='ls -l'
@@ -731,6 +752,7 @@ alias tre='tree -C'
 
 alias j='jobs -l'
 alias dn=disown
+compdef _jobs_fg dn
 
 # }}}
 # {{{ History
@@ -790,6 +812,8 @@ alias mysqlshow='nocorrect mysqlshow'
 alias mkdir='nocorrect mkdir'
 alias mv='nocorrect mv'
 alias rj='nocorrect rj'
+alias yast='nocorrect yast'
+alias yast2='nocorrect yast2'
 
 # }}}
 # {{{ X windows related
@@ -821,42 +845,35 @@ zsh-mime-setup
 
 # {{{ less
 
+if ! which less >&/dev/null; then
+  alias less=more
+fi
+
 alias v=less
 alias vs='less -S'
 
 # }}}
 # {{{ editors
 
-# emacs, windowed
-e () {
-  if [[ -n "$OTHER_USER" ]]; then
-    emacs -l $ZDOTDIR/.emacs "$@" &!
-  else
-    dsa
-    dga
-    emacs "$@" &!
-  fi
-}
-
 # enable ^Z
 alias pico='/usr/bin/pico -z'
 
-#if which vim >&/dev/null; then
-#  alias vi=vim
-#fi
+if which vim >&/dev/null; then
+    alias vi=vim
+fi
 
 # }}}
 # {{{ remote logins
 
-#ssh () {
-#  setopt local_traps
-#  trap 'cxx' INT EXIT QUIT KILL
-#  dsa
-#  # Pick out user@host word from argv; if it's not found, default to $1.
-#  # Finally, strip off .* domain component, if any.
-#  cx "${${${(M@)argv:#*@*}:-$1}%%.[a-z]*}" 
-#  command ssh "$@"
-#}
+ssh () {
+  setopt local_traps
+  trap 'cxx' INT EXIT QUIT KILL
+  dsa
+  # Pick out user@host word from argv; if it's not found, default to $1.
+  # Finally, strip off .* domain component, if any.
+  cx "${${${(M@)argv:#*@*}:-$1}%%.[a-z]*}" 
+  command ssh "$@"
+}
 
 # Best to run this from .zshrc.local
 #dsa >&DN || echo "ssh-agent setup failed; run dsa."
@@ -877,32 +894,34 @@ alias buz=bunzip2
 
 # }}}
 
+# }}}
+
 # {{{ Global aliases
 
 # WARNING: global aliases are evil.  Use with caution.
 
 # {{{ For screwed up keyboards missing pipe
 
-#alias -g PIPE='|'
+alias -g PIPE='|'
 
 # }}}
 # {{{ Paging with less / head / tail
 
-#alias -g L='| less'
-#alias -g LS='| less -S'
-#alias -g EL='|& less'
-#alias -g ELS='|& less -S'
-#alias -g TRIM='| cut -c 1-$COLUMNS'
+alias -g L='| less'
+alias -g LS='| less -S'
+alias -g EL='|& less'
+alias -g ELS='|& less -S'
+alias -g TRIM='| cut -c 1-$COLUMNS'
 
-#alias -g H='| head'
-#alias -g HL='| head -n $(( +LINES ? LINES - 4 : 20 ))'
-#alias -g EH='|& head'
-#alias -g EHL='|& head -n $(( +LINES ? LINES - 4 : 20 ))'
+alias -g H='| head'
+alias -g HL='| head -n $(( +LINES ? LINES - 4 : 20 ))'
+alias -g EH='|& head'
+alias -g EHL='|& head -n $(( +LINES ? LINES - 4 : 20 ))'
 
-#alias -g T='| tail'
-#alias -g TL='| tail -n $(( +LINES ? LINES - 4 : 20 ))'
-#alias -g ET='|& tail'
-#alias -g ETL='|& tail -n $(( +LINES ? LINES - 4 : 20 ))'
+alias -g T='| tail'
+alias -g TL='| tail -n $(( +LINES ? LINES - 4 : 20 ))'
+alias -g ET='|& tail'
+alias -g ETL='|& tail -n $(( +LINES ? LINES - 4 : 20 ))'
 
 # }}}
 # {{{ Sorting / counting
@@ -924,28 +943,17 @@ alias -g VM=/var/log/messages
 # }}}
 # {{{ grep, xargs
 
-alias -g G='| egrep --color=auto'
-alias -g Gi='| egrep --color=auto -i'
-alias -g Gl='| egrep --color=auto -l'
-alias -g Gv='| egrep --color=auto -v'
-alias -g EG='|& egrep --color=auto'
-alias -g EGv='|& egrep --color=auto -v'
-
-alias g='egrep --color=auto'
-alias gi='egrep --color=auto -i'
-alias gr='egrep --color=auto -r'
-alias gl='egrep --color=auto -l'
-alias gir='egrep --color=auto -ir'
-alias gil='egrep --color=auto -il'
-alias glr='egrep --color=auto -lr'
-alias gilr='egrep --color=auto -ilr'
+# see also grep-shortcuts script
+for switches in {,i}{,l,L}{,r}{,v}; do
+  eval "alias -g  G$switches='| egrep ${switches:+-$switches}'"
+  eval "alias -g EG$switches='|& egrep ${switches:+-$switches}'"
+  eval "alias -g XG$switches='| xargs egrep ${switches:+-$switches}'"
+  eval "alias -g X0G$switches='| xargs -0 egrep ${switches:+-$switches}'"
+done
 
 alias -g XA='| xargs'
+alias -g X1='| xargs -n1'
 alias -g X0='| xargs -0'
-alias -g XG='| xargs egrep --color=auto'
-alias -g XGv='| xargs egrep --color=auto -v'
-alias -g X0G='| xargs -0 egrep --color=auto'
-alias -g X0Gv='| xargs -0 egrep --color=auto -v'
 
 # }}}
 # {{{ awk
@@ -966,10 +974,10 @@ alias -g EA2="|& awk '{print \$2}'"
 alias -g EA3="|& awk '{print \$3}'"
 alias -g EA4="|& awk '{print \$4}'"
 alias -g EA5="|& awk '{print \$5}'"
-alias -g EA6="| awk '{print \$6}'"
-alias -g EA7="| awk '{print \$7}'"
-alias -g EA8="| awk '{print \$8}'"
-alias -g EA9="| awk '{print \$9}'"
+alias -g EA6="|& awk '{print \$6}'"
+alias -g EA7="|& awk '{print \$7}'"
+alias -g EA8="|& awk '{print \$8}'"
+alias -g EA9="|& awk '{print \$9}'"
 
 # }}}
 
@@ -1006,7 +1014,6 @@ bindkey '^[^b'   backward-to-/
 bindkey '^[^f'   forward-to-/
 bindkey '^[^[[C' emacs-forward-word
 bindkey '^[^[[D' emacs-backward-word
-bindkey '^R' history-incremental-search-backward
 
 bindkey '^[D'  kill-big-word
 
@@ -1027,7 +1034,21 @@ sh_load_status 'miscellaneous'
 
 # {{{ ls colours
 
-# moved to shared_env so people can choose to have this or not (for the colorblind)
+if which dircolors >&/dev/null && [[ -e "${zdotdir}/.dircolors" ]]; then
+  eval "`dircolors -b $zdotdir/.dircolors`"
+fi
+
+if [[ $ZSH_VERSION > 3.1.5 ]]; then
+  zmodload -i zsh/complist
+
+  zstyle ':completion:*' list-colors ''
+
+  zstyle ':completion:*:*:*:*:processes' list-colors \
+    '=(#b) #([0-9]#)*=0=01;31'
+
+  # completion colours
+  zstyle ':completion:*' list-colors "$LS_COLORS"
+fi  
 
 # }}}
 # {{{ Don't always autologout
@@ -1070,22 +1091,3 @@ fi
 which check_hist_size >&/dev/null && check_hist_size
 
 # }}}
-
-# {{{ lifted from AMD system profile (of which there is no zsh!)
-
-export XREMOTETMPDIR=$HOME    # For X-remote feature of PC-Xware
-export CAD=/proj/cad          # CAD working directory (platform indep)
-export CADTOOLS=/tools/cad    # CAD release directory (platform dep)
-export RCSINIT=-zLT           # set RCS to use Localtime
-
-if [ -z "$USER" -a -x /usr/bin/whoami ]; then
-    # HPSUX doesn't set $USER, so we need to use whoami
-    export USER=`/usr/bin/whoami`
-fi
-
-export MAIL=/usr/spool/mail/$USER
-
-# }}}
-
-# }}}
-
