@@ -1,0 +1,38 @@
+# mytools, compile tools with PREFIX=~/mytools and install here on systems where you 
+# don't have root access.  Also put some fundamental tools into ~/bin/os-arch for 
+# your usage across different system types (such as the color ls, dircolors, and newer
+# zsh and bash shells)
+
+export archtype=`uname`-`uname -m`
+
+# common function for both 32 and 64 bit architectures
+function x86_common
+{
+#    ulimit -Ss unlimited; ulimit -Sd unlimited; ulimit -c 10; ulimit -Sm unlimited
+    ulimit -Ss unlimited; ulimit -Sd unlimited; ulimit -Sm unlimited
+    PPATH=~/mytools/bin
+}
+  
+case $archtype in
+  SunOS-sun4u ) 
+    PPATH=~/bin/sparc:/usr/openwin/bin
+    export OPENWINHOME=/usr/openwin
+    export MANPATH=$MANPATH:/usr/openwin/man
+    ulimit -c 0;;
+  Linux-x86_64 )
+    x86_common
+    PPATH=~/mytools/bin64:$PPATH;;
+  Linux-i686 )
+    x86_common;;
+  FreeBSD-i386 )
+    PPATH=~/mytools/bin;;
+  Linux-armv5tel )
+    PPATH=~/mytools/bin;;
+  Darwin-i386 )
+    PPATH=/usr/local/bin;;
+  * )
+    echo "warning, unsupported archtype:$archtype";;
+esac
+
+export PATH=$PPATH:$PATH
+

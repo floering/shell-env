@@ -1,0 +1,2 @@
+export GDFONTPATH=/usr/share/fonts/bitstream-vera
+export GNUPLOT_DEFAULT_GDFONT=Vera

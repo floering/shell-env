@@ -1,0 +1,44 @@
+# adding a little color to your life
+# NOTE: Beware adding advanced colorization features to LS_COLORS (via dircolors) as this
+# may prevent tcsh from running at all even in non-interactive scripts!
+
+export archtype=`uname`-`uname -m`
+
+export LSBIN=~/bin/$archtype
+
+if $LSBIN/ls -F --color / >&/dev/null; then
+  alias ls='command $LSBIN/ls -F --color'
+elif $LSBIN/ls -F / >&/dev/null; then
+  alias ls='command $LSBIN/ls -F'
+elif $LSBIN/ls --color / >&/dev/null; then
+  alias ls='command $LSBIN/ls --color'
+fi
+
+# {{{ ls colors
+
+function dircol
+{
+  if which dircolors >&/dev/null && [[ -e "${zdotdir}/.dir_colors${1}" ]]; then
+    if [ -e ${LSBIN}/dircolors ]; then
+      dcpath=${LSBIN}
+    fi
+    eval "`${LSBIN}/dircolors -b ${zdotdir}/.dir_colors${1}`"
+  fi
+}
+dircol
+
+# }}}
+
+alias gerp="egrep --color=auto"
+alias grep="egrep --color=auto"
+alias rgrep="grep --color=auto"
+alias ncrgrep="grep"
+
+# a better version of lesspipe.sh:
+export LESS="-R -M --shift 5"
+export LESSCOLORIZER=~/bin/code2color
+export LESSOPEN='|~/bin/lesspipe.sh %s'
+
+# and make the colors bold out of code2color for lesspipe and dark terminals
+export c2cbold=1
+

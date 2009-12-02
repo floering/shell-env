@@ -1,0 +1,9 @@
+alias more='less'
+alias rmflock='rm ~/.mozilla/firefox/*/.parentlock; rm ~/.mozilla/firefox/*/lock'
+alias rmtlock='rm ~/.thunderbird/*/.parentlock; rm ~/.thunderbird/*/lock'
+alias rd="rm -ref"
+alias md="mkdir"
+alias pltags="/tool/pandora/.package/vim-7.1/share/vim/vim71/tools/pltags.pl"
+alias killperls="ps -ef |grep perl|grep $USER|grep -v grep|awk '{print $2}'|xargs kill -9"
+alias vncserver-1600='vncserver -geometry 1592x1160 -depth 16'
+alias startmysqld='~/mytools/bin/mysqld_safe --defaults-file=~/mytools/etc/my.cnf --datadir=~/mytools/var/lib/mysql'

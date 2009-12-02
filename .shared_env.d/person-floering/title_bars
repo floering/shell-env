@@ -1,0 +1,21 @@
+
+# changes window titles to contain project and rev as well as CWD and current command
+
+case $TERM in
+    xterm*|dtterm*|aixterm*|Eterm*|rxvt*|aterm|kterm|gnome)
+# this sets the title bar of window terminals
+  precmd () {
+    setopt promptsubst
+    if [[ -n $SSH_ORIGINAL_COMMAND ]]; then
+      prompt_floering_precmd
+    fi
+    echo -ne "\033]0;${PROJECT} ${REV} ${USER}@${HOSTNAME}:${PWD/$HOME/~}\007"
+  }
+
+# this sets the title bar to project and current command when running
+  preexec () {
+    print -Pn "\e]0;${PROJECT} ${REV} executing:\"$1\"\a"
+  }
+esac
+
+

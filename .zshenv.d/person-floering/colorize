@@ -1,0 +1,19 @@
+# adding a little color to your life
+# NOTE: Beware adding advanced colorization features to LS_COLORS (via dircolors) as this
+# may prevent tcsh from running at all even in non-interactive scripts!
+
+sh_load_status 'aliases and functions'
+
+# zsh completion colors!  (try that with tcsh)
+if [[ $ZSH_VERSION > 3.1.5 ]]; then
+  zmodload -i zsh/complist
+
+  zstyle ':completion:*' list-colors ''
+
+  zstyle ':completion:*:*:*:*:processes' list-colors \
+    '=(#b) #([0-9]#)*=0=01;31'
+
+  # completion colours
+  zstyle ':completion:*' list-colors "$LS_COLORS"
+fi  
+

@@ -24,8 +24,7 @@ sh_load_status .bashrc
 
 if [ -e /usr/local/setup/sys.bash_profile ] ; then
   . /usr/local/setup/sys.bash_profile
-fi
-if [ -f /etc/bashrc ]; then
+elif [ -f /etc/bashrc ]; then
     sh_load_status "/etc/bashrc"
     . /etc/bashrc
 else

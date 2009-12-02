@@ -1,0 +1,71 @@
+# {{{ Prompts
+
+# alias to get the nice fonts for prompts
+alias nicefonts='xset fp+ /home/floering/X_fonts; xset fp rehash'
+
+# Load the theme-able prompt system and use it to set a prompt.
+# Probably only suitable for a dark background terminal.
+
+local _find_promptinit
+_find_promptinit=( $^fpath/promptinit(N) )
+if (( $#_find_promptinit >= 1 )) && [[ -r $_find_promptinit[1] ]]; then
+  sh_load_status 'prompt system'
+
+  autoload -U promptinit
+  promptinit
+
+  PS4="trace %N:%i> "
+  #RPS1="$bold_colour$bg_red              $reset_colour"
+
+  # Default prompt style
+#  adam2_colors=( white cyan cyan green )
+#
+#  if [[ -r $zdotdir/.zsh_prompt ]]; then
+#    . $zdotdir/.zsh_prompt
+#  fi
+#
+#  if [[ -r /proc/$PPID/cmdline ]] &&
+#       egrep -q 'watchlogs|kates|nexus|vga' /proc/$PPID/cmdline;
+#  then
+#    # probably OK for fancy graphic prompt
+#    if [[ "`prompt -h adam2`" == *8bit* ]]; then
+#      prompt adam2 8bit $adam2_colors
+#    else
+#      prompt adam2 $adam2_colors
+#    fi
+#  else
+#    if [[ "`prompt -h adam2`" == *plain* ]]; then
+#      prompt adam2 plain $adam2_colors
+#    else
+#      prompt adam2 $adam2_colors
+#    fi
+#  fi
+
+  # choose a random prompt from .zsh_prompts
+
+  randline () {
+      integer z=$(wc -l <$1 | awk '{print $1}')
+      sed -n $[RANDOM % z + 1]p $1
+  }
+
+  if [[ -z $SSH_ORIGINAL_COMMAND ]]; then
+    if [[ -f ~/.zsh_prompts ]]; then
+      toprompt=$(randline ~/.zsh_prompts)
+    else
+      toprompt='fade green'
+    fi
+  else
+    toprompt='floering'
+  fi
+  prompt $toprompt
+
+  # TopGun ssh for Palm
+  if [[ $TERM == tgtelnet ]]; then
+    prompt off
+  fi
+else
+  PS1='%n@%m %B%3~%b %# '
+fi
+
+# }}}
+

@@ -1,0 +1,6 @@
+
+alias vi='gvim'
+alias rvi="/bin/vi"
+export CVS_EDITOR="gvim -f"
+export EDITOR="gvim -f"
+
