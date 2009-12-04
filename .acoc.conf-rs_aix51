@@ -1,0 +1,215 @@
+# sample configuration file for acoc
+#
+# $Id: acoc.conf,v 1.29 2003/10/08 03:50:15 ianmacd Exp $
+
+#[default]
+#
+# default rules go here
+
+# all kinds of diffs
+[diff,rcsdiff,cvs diff,p4 diff]
+/^([+>*].*)/				yellow+bold
+/^([-<].*)/				magenta+bold
+/^(@@.*|diff.*|[\d,acd]+)/		green+bold
+
+[ping/ap]
+# hostname and IP address
+/(\d+) bytes from ((?:\d?\d?\d\.){3}\d?\d?\d): icmp_seq=(\d+) ttl=(\d+)/ magenta+bold,cyan+bold,magenta+bold
+# < 100 ms RTT
+/time=(\d\d? ms)/			green+bold
+# > 100 ms RTT
+/time=(1\d\d ms)/			yellow+bold
+# > 200 ms RTT
+/time=([2-9]\d\d ms)/			red+bold
+# end report
+/(\d+) packets transmitted, (\d+) packets received, (\d+%) packet loss/ magenta+bold
+@round-trip (min)/(avg)/(max) = (\d+\.?\d*)/(\d+\.?\d*)/(\d+\.?\d*) ms@	  green+bold,yellow+bold,red+bold,green+bold,yellow+bold,red+bold
+
+[traceroute/a]
+#IP address
+/((?:\d?\d?\d\.){3}\d?\d?\d)/g		cyan+bold
+# seq and host
+/^ (\d+)  ([^ ]+)/			magenta+bold,yellow+bold
+# < 100 ms RTT
+/[^\d]\d\d? ms/g			green+bold
+# > 100 ms RTT
+/1\d\d ms/g				yellow+bold
+# > 200 ms RTT
+/[2-9]\d\d\d? ms/g			red+bold
+# no response or TTL < 1
+/(\*|![HNPSFXVC]?)/g			red+bold
+
+# compilation and package building
+[make,gmake,rpmbuild -b,rpmbuild --rebuild,rpm -b,rpm --rebuild]
+/^(make.*)$/				yellow+bold
+
+[configure,rpmbuild -b,rpmbuild --rebuild,rpm -b,rpm --rebuild]
+/^(checking .+\.\.\.) (yes)$/		yellow+bold,green+bold
+/^(checking .+\.\.\.) (no)$/		yellow+bold,red+bold
+/^(checking .+\.\.\.) ?(.*)/	yellow+bold,cyan+bold
+#/\.\.\..(yes)$/ green+bold
+
+[make,gmake,cc,gcc,rpmbuild -b,rpmbuild --rebuild,rpm -b,rpm --rebuild]
+/(\S+\.c)\b/				cyan+bold
+/-o\s+(\S+(?:\.o)?)\b/			green+bold
+/\s(-l\S+)\b/g				magenta+bold
+/^([^:]+): (In function `)(.+)(':)/	green+bold,yellow+bold,cyan+bold,yellow+bold
+/^([^:]+):(\d+): (warning: [^`]+`)([^']+)(.+)$/	green+bold,bold,yellow+bold,cyan+bold,yellow+bold
+/^([^:]+):(\d+): (warning: [^`]+)$/	green+bold,bold+bold,yellow+bold
+
+# package building
+[rpmbuild -b/ae,rpmbuild --rebuild/ae,rpm -b/ae,rpm --rebuild/ae]
+/^(\+.*)$/				bold
+/^(Executing)([^:]+): (.+)$/		yellow+bold,cyan+bold,green+bold
+/^(Patch #\d+) \((.+)\):$/		yellow+bold,green+bold
+/^(Wrote: )(.+)/			yellow+bold,green+bold
+
+# package querying
+[rpm -qi/a,rpm -qpi/a]
+/^(Name|Version|Release|Install Date|Group|Size)\s*: (.+)\s\s/	yellow+bold,green+bold
+/(^Signature|^Packager|^URL|^Summary|Relocations|Vendor|Build (?:Date|Host)|Source RPM|License)\s*: (.+)$/	yellow+bold,green+bold
+
+[w/a]
+/^(\S+)\s+(\S+)\s+(.{7})\s+\S+\s+(\S+)\s+(\S+)\s+(.+)$/	bold,blue+bold,yellow+bold,green+bold,green+bold,magenta+bold
+/(\d+days)/				red+bold
+
+#[irb]
+# irb doesn't function correctly
+#/^irb\(([^)]+)\):(\d+):(\d+)(.)/	bold,yellow,cyan,green
+
+[vmstat/ae]
+# load
+#/^\s+([5-9]\d*).*/			yellow+bold
+#/^\s+([1-9]\d+).*/			red+bold
+# free RAM
+#/^\s+\S+\s+\S+\s+\S+\s+(\d\d)\s+.*/	red+bold
+/^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/		red+bold,yellow+bold,green+bold,blue+bold,magenta+bold,red+bold,yellow+bold,green+bold,blue+bold,magenta+bold,red+bold,yellow+bold,green+bold,blue+bold,magenta+bold,red+bold,yellow+bold
+
+[top/a]
+# load average < 0.70
+#/(?!load average: )0\.[0-6]\d/g		green+bold
+# load average 0.99 < load < 0.70
+#/(?!load average: )0\.[7-9]\d/g		yellow+bold
+# load average > 1.00
+#/(?!load average: )[^0]\.\d\d/g		red+bold
+# process information
+#/^(\d+) processes\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d)/ cyan+bold
+# header percentages, except for idle
+#/\d+\.\d+% (?!Idle)/g			cyan+bold
+# idle percentage 0 - 19%
+#/((?:1\d|[^\d]\d)\.\d%)/		red+bold
+# idle percentage 20 - 49%
+#/([2-4]\d\.\d%)/			yellow+bold
+# idle percentage 50 - 100%
+#/(1?[5-9]\d\.\d%)/			green+bold
+# memory
+/\d*\.?\d+[kM]/g					cyan+bold
+# root processes
+/root\s+(?:\S+\s+){6}(.+)$/		red+bold
+# stat names (doesn't quite work)
+/\b(procs|user|system|wait|idle|users|active|remote|sleep time|files|free|total|used)\b/g	  magenta+bold
+# zombies and processes in uninterruptible sleep
+#/\b([ZD])\b/				red+bold
+
+[nmon32]
+/(defunct\s+Zombie)/ red+bold
+/(zombie)/ red+bold
+/(Running)/ cyan+bold
+/(active)/ magenta+bold
+/^\s+(PID)\s+(\%CPU)\s+(Size\s+Res\s+Res\s+Res\s+Char)\s+(RAM).*(Paging)/ magenta+bold,green+bold,cyan+bold,green+bold,blue+bold
+@(Used)\s+(KB\s+Set\s+Text\s+Data\s+I/O)\s+(Use)\s+(io other repage)@ green+bold,cyan+bold,green+bold,blue+bold
+/^\s+(\d+)\s+(\d\.\d)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d\%)\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,green+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,green+bold,blue+bold
+/^\s+(\d+)\s+(\d\.\d)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\d\%)\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,green+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,red+bold,blue+bold
+/^\s+(\d+)\s+([1-8]\d\.\d)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d\%)\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,yellow+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,green+bold,blue+bold
+/^\s+(\d+)\s+([1-8]\d\.\d)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\d\%)\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,yellow+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,red+bold,blue+bold
+/^\s+(\d+)\s+(\d*[90]\d\.\d)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d\%)\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,red+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,green+bold,blue+bold
+/^\s+(\d+)\s+(\d*[90]\d\.\d)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\d\%)\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,red+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,cyan+bold,red+bold,blue+bold
+/(root|daemon).*\s([\S\.\_\-]+)\s*$/ yellow+bold
+/(floering).*\s([\S\.\_\-]+)\s*$/ green+bold
+
+[df/a]
+/(Filesystem)\s+(1k-blocks)\s+(Used)\s+(Available)\s+(Use%)\s+(Mounted on)/ yellow+bold,magenta+bold,red+bold,cyan+bold,green+bold,bold
+/(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+\d+%/ yellow+bold,magenta+bold,red+bold,cyan+bold
+/^\s+(\d+)\s+(\d+)\s+(\d+)/ magenta+bold,red+bold,cyan+bold
+@(/proc)\s+(-)\s+(-)\s+(0)\s+(-)\s+(/proc)@ yellow+bold,magenta+bold,red+bold,cyan+bold,green+bold
+/^(\D+)$/				yellow+bold
+# 90 - 95% full
+/.*(9[0-5]%)\s+(.+)$/			yellow+bold
+# 96 - 100% full
+/.*(9[6-9]%|100%)\s+(.+)$/		red+bold
+# 0-89% full
+/.*([0-8]\d%)\s+(.+)$/			green+bold
+/.*[^\d](\d%)\s+(.+)$/			green+bold
+
+[ifconfig,route]
+# IP addresses
+/(?:\d?\d?\d\.){3}\d?\d?\d/g		cyan+bold
+/(inet[6]?|netmask|broadcast|flags)/g        magenta+bold
+/<(.*)>/				green+bold
+/(0x[0-9abcdef]*)/			yellow+bold
+
+[route/a]
+# interface
+/([a-z]+\d+|lo)$/			magenta+bold
+
+[ifconfig/ae]
+/^(\S+).*((?:[\dA-F][\dA-F]:){5}[\dA-F][\dA-F])/	      magenta+bold
+/[RT]X packets:(\d+).*(?:frame|carrier):(\d+)/		      green+bold
+/errors:([^0]+)\s+dropped:([^0]+)\s+overruns:([^0]+)/	      red+bold
+/collisions:([^0][\d\s]*)/				      red+bold
+/RX bytes:(\d+)\s+\(([^)]+)\)\s+TX bytes:(\d+)\s+\(([^)]+)\)/ green+bold
+
+[tcpdump/t]
+# ARP
+/^(\d\d:\d\d:\d\d\.\d+)\s+(arp\s+\S+)\s+(\S+)\s+(\S+)\s+(\S+)$/	 green+bold,bold,cyan+bold,bold,cyan+bold
+# everything else
+/^(\d\d:\d\d:\d\d\.\d+)\s+(\S+)\.(\S+)\s+>\s+(\S+)\.(\S+):(.+)$/ green+bold,cyan+bold,yellow+bold,cyan+bold,yellow+bold,bold
+
+#AIX has no LDD, use dump and other binutils
+#[ldd/t]
+#/(\S+) => (\S+) (\S+)/			yellow+bold,bold+bold,magenta+bold
+
+# this is broke for AIX, and we don't want to colorize this anyway because many
+# configure scripts use nm's output to create shared libraries and .exp files
+#[nm/t]
+#/^(\S+) ([[:lower:]]) (\S+)/		yellow,green+bold,magenta
+#/^(\S+) ([[:upper:]]) (\S+)/		yellow,cyan+bold,magenta
+# undefined symbols
+#/([Uu] \w+?@@\S+)/			red
+
+# tracing streams is not something that I have attempted yet...
+#[strace/aet]
+# calls to open
+#/^(open)\("([^"]+)", (\S+)/		yellow,green,cyan
+# return value
+#/= (.+)/				bold
+
+# library tracer doesn't exist in AIX, sorry
+#[ltrace/et]
+# syscalls
+#/^([^(]+)\(/				green
+
+[id]
+/\d+/g					green+bold
+
+# ls needs a pseudo-terminal - I already have a color ls
+#[ls/ap]
+# setuid
+#/^-[r-][w-]([Ss])/			bold
+# setgid
+#/^-[rwx-]{5}([Ss])/			bold
+# sticky bit
+#/^d[rwx-]{8}(t)/			bold
+#/^(?:\S+)\s+(\d+)\s+(\w+)\s+(\w+)\s+(\d+)\s+(\S+\s+\S+\s+\S+)/  green,cyan,yellow,magenta,blue
+
+[ps a]
+/^\s+(PID)\s+(TTY)\s+(STAT)\s+(TIME)/ magenta+bold,yellow+bold,green+bold,cyan+bold
+/^\s*(\d+)\s+(\S+)\s+([^DZ\s]+)\s+(\d+:\d+)/  magenta+bold,yellow+bold,green+bold,cyan+bold
+# zombies and uninterruptible sleep
+/^\s*(\d+)\s+([DZ]+)\s+(\S+)\s+(\S+)/	magenta+bold,red+bold,cyan+bold,red+bold
+
+[ps -ef/t]
+/^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+\s+\d\d)\s+(\S+)\s+(\d+:\d+)/ green+bold,magenta+bold,magenta+bold,blue+bold,cyan+bold,yellow+bold,cyan+bold
+/^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\S+)\s+(\d+:\d+)/ green+bold,magenta+bold,magenta+bold,blue+bold,cyan+bold,yellow+bold,cyan+bold
+/^\s*(\S+\s+\d+\s+\d+\s+\d+\s+\d+:\d+\s+<defunct>)/ red+bold
+/^\s+(UID)\s+(PID)\s+(PPID)\s+(C)\s+(STIME)\s+(TTY)\s+(TIME)/ green+bold,magenta+bold,magenta+bold,blue+bold,cyan+bold,yellow+bold,cyan+bold
