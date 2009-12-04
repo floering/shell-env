@@ -6,11 +6,9 @@ eval 'exec "$OSRUBYBIN" -W0 -x -S $0 ${1+"$@"}'
 echo "the 'exec \"$OSRUBYBIN\" -x -S ...' failed!" >&2
 exit 1
 
-#!/home/floering/mytools/bin/ruby -W0
+#!ruby
 #
 # acoc - Arbitrary Command Output Colourer
-#
-# $Id: acoc,v 1.67 2005/02/27 01:02:24 ianmacd Exp $
 #
 # Version : 0.7.1
 # Author  : Ian Macdonald <ian@caliban.org>
@@ -79,8 +77,86 @@ send them to me for inclusion in a subsequent release.
 
 =end
 
+module Term
+
+module ANSIColor
+
+  @@attributes = [
+    [ :clear        ,   0 ], 
+    [ :reset        ,   0 ],     # synonym for :clear
+    [ :bold         ,   1 ], 
+    [ :dark         ,   2 ], 
+    [ :italic       ,   3 ],     # not widely implemented
+    [ :underline    ,   4 ], 
+    [ :underscore   ,   4 ],     # synonym for :underline
+    [ :blink        ,   5 ], 
+    [ :rapid_blink  ,   6 ],     # not widely implemented
+    [ :negative     ,   7 ],     # no reverse because of String#reverse
+    [ :concealed    ,   8 ], 
+    [ :strikethrough,   9 ],     # not widely implemented
+    [ :black        ,  30 ], 
+    [ :red          ,  31 ], 
+    [ :green        ,  32 ], 
+    [ :yellow       ,  33 ], 
+    [ :blue         ,  34 ], 
+    [ :magenta      ,  35 ], 
+    [ :cyan         ,  36 ], 
+    [ :white        ,  37 ], 
+    [ :on_black     ,  40 ], 
+    [ :on_red       ,  41 ], 
+    [ :on_green     ,  42 ], 
+    [ :on_yellow    ,  43 ], 
+    [ :on_blue      ,  44 ], 
+    [ :on_magenta   ,  45 ], 
+    [ :on_cyan      ,  46 ], 
+    [ :on_white     ,  47 ], 
+  ]
+
+  @@attributes.each do |c, v|
+    eval %Q{
+        def #{c.to_s}(string = nil)
+            result = "\e[#{v}m"
+            if block_given?
+                result << yield
+                result << "\e[0m"
+            elsif string
+                result << string
+                result << "\e[0m"
+            elsif respond_to?(:to_str)
+                result << self
+                result << "\e[0m"
+            end
+            return result
+        end
+    }
+  end
+
+  ColoredRegexp = /\e\[([34][0-7]|[0-9])m/
+
+  def uncolored(string = nil)
+    if block_given?
+      yield.gsub(ColoredRegexp, '')
+    elsif string
+      string.gsub(ColoredRegexp, '')
+    elsif respond_to?(:to_str)
+      gsub(ColoredRegexp, '')
+    else
+      ''
+    end
+  end
+
+  module_function
+    
+  def attributes
+    @@attributes.map { |c| c[0] }
+  end
+    
+end
+
+end
+    # vim: set et sw=2 ts=2:
+
 require 'English'
-require 'term/ansicolor'
 begin
   require 'tpty'
 rescue LoadError
