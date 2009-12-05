@@ -126,7 +126,7 @@ fi
 #PATH=/usr/local/bin:/usr/X11R6/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
 PATH=~/bin
-for i in /usr/bin /tool/pandora/bin /usr/local/bin /bin /usr/bin/X11 /usr/X11R6/bin /etc /usr/ucb /tool/amd/rex/bin /proj/lsf/scripts /usr/local/sbin /usr/sbin /sbin; do
+for i in /usr/bin /tool/pandora/bin /usr/local/bin /usr/local/git/bin /usr/local/mysql/bin /bin /usr/bin/X11 /usr/X11R6/bin /etc /usr/ucb /tool/amd/rex/bin /proj/lsf/scripts /usr/local/sbin /usr/sbin /sbin; do
 	if [ -d $i ] ; then
 		export PATH=$PATH:$i
     fi

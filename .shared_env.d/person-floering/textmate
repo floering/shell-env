@@ -1,0 +1,5 @@
+alias et='mate . &'
+alias ett='mate app config lib db public test vendor/plugins &'
+export SVN_EDITOR="/usr/local/bin/mate -w"
+export CVS_EDITOR="/usr/local/bin/mate -w"
+export GIT_EDITOR="/usr/local/bin/mate -w"
