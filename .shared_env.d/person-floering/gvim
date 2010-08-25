@@ -1,6 +1,15 @@
 
-alias vi='gvim'
 alias rvi="/bin/vi"
-export CVS_EDITOR="gvim -f"
-export EDITOR="gvim -f"
-
+if `which gvim 2>&1 >/dev/null`; then
+  if `which vim 2>&1 >/dev/null`; then
+    export CVS_EDITOR='vi'
+  else
+    alias vi='vim'
+    export CVS_EDITOR='vim'
+    export EDITOR='vim'
+  fi
+else
+  alias vi='gvim'
+  export CVS_EDITOR="gvim -f"
+  export EDITOR="gvim -f"
+fi

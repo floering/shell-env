@@ -29,6 +29,7 @@ case $archtype in
   Linux-armv5tel )
     PPATH=~/mytools/bin;;
   Darwin-i386 )
+    ulimit -Sn 1024
     PPATH=/usr/local/bin;;
   * )
     echo "warning, unsupported archtype:$archtype";;
