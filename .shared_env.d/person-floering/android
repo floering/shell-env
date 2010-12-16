@@ -1,0 +1,7 @@
+
+if [ -d ~/android-sdk/tools ]; then
+    PATH=$PATH:~/android-sdk/tools
+fi
+
+function mountAndroid  { hdiutil attach ~/android.dmg  -mountpoint /Volumes/android; }
+
