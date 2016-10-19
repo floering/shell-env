@@ -31,6 +31,8 @@ case $archtype in
   Darwin-i386 )
     ulimit -Sn 1024
     PPATH=/usr/local/bin;;
+  Darwin-x86_64 )
+    PPATH=/usr/local/bin;;
   * )
     echo "warning, unsupported archtype:$archtype";;
 esac

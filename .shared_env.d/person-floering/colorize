@@ -18,7 +18,7 @@ fi
 
 function dircol
 {
-  if which dircolors >&/dev/null && [[ -e "${zdotdir}/.dir_colors${1}" ]]; then
+  if $LSBIN/dircolors >&/dev/null && [[ -e "${zdotdir}/.dir_colors${1}" ]]; then
     if [ -e ${LSBIN}/dircolors ]; then
       dcpath=${LSBIN}
     fi
